@@ -1,7 +1,13 @@
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency } from "@/lib/finance-data";
+import { useInstallmentPurchases } from "@/hooks/use-installment-purchases";
+import { formatCurrency, type InstallmentPurchase } from "@/lib/finance-data";
 import { CheckCircle2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface InstallmentPurchaseCardsProps {
+  purchases?: InstallmentPurchase[];
+  onMarkAsPaid?: (purchaseId: string) => void;
+}
 
 function formatProgress(paid: number, total: number): string {
   const bars = 5;
@@ -9,8 +15,11 @@ function formatProgress(paid: number, total: number): string {
   return `[${"█".repeat(filled)}${"░".repeat(Math.max(0, bars - filled))}]`;
 }
 
-export function InstallmentPurchaseCards() {
-  const { installmentPurchases, transactions, markInstallmentAsPaid } = useFinance();
+export function InstallmentPurchaseCards({ purchases, onMarkAsPaid }: InstallmentPurchaseCardsProps) {
+  const { transactions } = useFinance();
+  const installmentApi = useInstallmentPurchases();
+  const installmentPurchases = purchases ?? installmentApi.installmentPurchases;
+  const markInstallmentAsPaid = onMarkAsPaid ?? installmentApi.markInstallmentAsPaid;
 
   if (!installmentPurchases.length) {
     return (

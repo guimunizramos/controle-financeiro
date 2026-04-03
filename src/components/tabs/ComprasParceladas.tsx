@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InstallmentPurchaseCards } from "@/components/InstallmentPurchaseCards";
 import { useFinance } from "@/contexts/FinanceContext";
+import { useInstallmentPurchases } from "@/hooks/use-installment-purchases";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function ComprasParceladas() {
-  const { cards, categoryBudgets, addInstallmentPurchase } = useFinance();
+  const { cards, categoryBudgets } = useFinance();
+  const { installmentPurchases, addInstallmentPurchase, markInstallmentAsPaid } = useInstallmentPurchases();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     firstInstallmentDate: new Date().toISOString().slice(0, 10),
@@ -133,7 +135,7 @@ export function ComprasParceladas() {
         </Dialog>
       </div>
 
-      <InstallmentPurchaseCards />
+      <InstallmentPurchaseCards purchases={installmentPurchases} onMarkAsPaid={markInstallmentAsPaid} />
     </div>
   );
 }
