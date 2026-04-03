@@ -27,15 +27,12 @@ const Index = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
               <Activity className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">Cycle Finance</h1>
-              <p className="text-xs text-muted-foreground">
-                {getGreeting()}, Gui!
-                {guiCard && daysLeft !== null && (
-                  <> · Cartão Gui fecha em <span className="text-primary font-medium">{daysLeft} dias</span></>
-                )}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {getGreeting()}, Gui!
+              {guiCard && daysLeft !== null && (
+                <> · Cartão Gui fecha em <span className="text-primary font-medium">{daysLeft} dias</span></>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="min-w-40">

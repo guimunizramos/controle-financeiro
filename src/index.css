@@ -50,7 +50,7 @@
 
     --font-heading: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-mono: 'Inter', sans-serif;
 
     --glow-primary: 0 0 20px hsl(145 100% 39% / 0.15);
     --glow-primary-strong: 0 0 30px hsl(145 100% 39% / 0.25);

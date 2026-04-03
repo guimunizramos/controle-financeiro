@@ -41,6 +41,7 @@ export const fixedExpenses: FixedExpense[] = [
 ];
 
 export const categoryBudgets: CategoryBudget[] = [
+  { name: "Caixa", limit: 1500 },
   { name: "Alimentação", limit: 800 },
   { name: "Supermercado", limit: 1200 },
   { name: "Carro", limit: 500 },
