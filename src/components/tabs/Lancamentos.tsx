@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { determineCycle, formatCurrency } from "@/lib/finance-data";
-import { ArrowDownLeft, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ArrowDownLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,18 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function Lancamentos() {
-  const { transactions, cards, categoryBudgets, addTransaction, addInstallmentPurchase, removeTransaction } = useFinance();
+  const { transactions, cards, categoryBudgets, addTransaction, removeTransaction } = useFinance();
   const [open, setOpen] = useState(false);
-  const [installmentOpen, setInstallmentOpen] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), description: "", amount: "", card: "", category: "" });
-  const [installmentForm, setInstallmentForm] = useState({
-    firstInstallmentDate: new Date().toISOString().slice(0, 10),
-    description: "",
-    totalValue: "",
-    totalInstallments: "2",
-    cardOriginId: "",
-    categoryId: "",
-  });
 
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const cycles = [...new Set(sorted.map((t) => t.cycle))];
@@ -41,180 +32,67 @@ export function Lancamentos() {
     setOpen(false);
   };
 
-  const handleInstallmentSubmit = () => {
-    if (
-      !installmentForm.description ||
-      !installmentForm.totalValue ||
-      !installmentForm.totalInstallments ||
-      !installmentForm.cardOriginId ||
-      !installmentForm.categoryId
-    ) {
-      return;
-    }
-
-    addInstallmentPurchase({
-      description: installmentForm.description.trim(),
-      totalValue: parseFloat(installmentForm.totalValue),
-      totalInstallments: Math.max(1, parseInt(installmentForm.totalInstallments, 10)),
-      cardOriginId: installmentForm.cardOriginId,
-      categoryId: installmentForm.categoryId,
-      firstInstallmentDate: installmentForm.firstInstallmentDate,
-    });
-
-    setInstallmentForm({
-      firstInstallmentDate: new Date().toISOString().slice(0, 10),
-      description: "",
-      totalValue: "",
-      totalInstallments: "2",
-      cardOriginId: "",
-      categoryId: "",
-    });
-    setInstallmentOpen(false);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Histórico de Lançamentos</h2>
-        <div className="flex gap-2">
-          <Dialog open={installmentOpen} onOpenChange={setInstallmentOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="gap-1.5 border-primary text-primary hover:bg-primary/10">
-                <ReceiptText className="h-4 w-4" /> Compra Parcelada
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader>
-                <DialogTitle>Nova Compra Parcelada</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Primeira Parcela</Label>
-                    <Input
-                      type="date"
-                      value={installmentForm.firstInstallmentDate}
-                      onChange={(e) => setInstallmentForm({ ...installmentForm, firstInstallmentDate: e.target.value })}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Qtd. Parcelas</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="48"
-                      value={installmentForm.totalInstallments}
-                      onChange={(e) => setInstallmentForm({ ...installmentForm, totalInstallments: e.target.value })}
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Descrição</Label>
-                  <Input
-                    placeholder="Ex: Fone de ouvido"
-                    value={installmentForm.description}
-                    onChange={(e) => setInstallmentForm({ ...installmentForm, description: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Valor Total (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0,00"
-                    value={installmentForm.totalValue}
-                    onChange={(e) => setInstallmentForm({ ...installmentForm, totalValue: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Cartão Origem</Label>
-                    <Select value={installmentForm.cardOriginId} onValueChange={(v) => setInstallmentForm({ ...installmentForm, cardOriginId: v })}>
-                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {cards.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Categoria</Label>
-                    <Select value={installmentForm.categoryId} onValueChange={(v) => setInstallmentForm({ ...installmentForm, categoryId: v })}>
-                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {categoryBudgets.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button onClick={handleInstallmentSubmit} className="w-full gradient-primary text-primary-foreground">
-                  Gerar Parcelas
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
 
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
-                <Plus className="h-4 w-4" /> Novo Gasto
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader>
-                <DialogTitle>Registrar Gasto</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Data</Label>
-                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-secondary border-border" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Valor (R$)</Label>
-                    <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="bg-secondary border-border" />
-                  </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
+              <Plus className="h-4 w-4" /> Novo Gasto
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Registrar Gasto</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Data</Label>
+                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-secondary border-border" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Descrição</Label>
-                  <Input placeholder="Ex: iFood, Uber, Supermercado..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-secondary border-border" />
+                  <Label className="text-xs">Valor (R$)</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="bg-secondary border-border" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Cartão (Origem)</Label>
-                    <Select value={form.card} onValueChange={(v) => setForm({ ...form, card: v })}>
-                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {cards.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Categoria</Label>
-                    <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {categoryBudgets.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {form.card && form.date && (
-                  <p className="text-xs text-muted-foreground">
-                    Ciclo calculado: <span className="text-primary font-medium">{determineCycle(form.date, form.card, cards)}</span>
-                  </p>
-                )}
-                <Button onClick={handleSubmit} className="w-full gradient-primary text-primary-foreground">
-                  Registrar Gasto
-                </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Descrição</Label>
+                <Input placeholder="Ex: iFood, Uber, Supermercado..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-secondary border-border" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cartão (Origem)</Label>
+                  <Select value={form.card} onValueChange={(v) => setForm({ ...form, card: v })}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {cards.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {categoryBudgets.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {form.card && form.date && (
+                <p className="text-xs text-muted-foreground">
+                  Ciclo calculado: <span className="text-primary font-medium">{determineCycle(form.date, form.card, cards)}</span>
+                </p>
+              )}
+              <Button onClick={handleSubmit} className="w-full gradient-primary text-primary-foreground">
+                Registrar Gasto
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {cycles.map((cycle) => {
