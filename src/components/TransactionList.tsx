@@ -16,15 +16,15 @@ export function TransactionList() {
         <span className="text-xs text-muted-foreground">{currentTx.length} itens</span>
       </div>
       <div className="space-y-1">
-        {currentTx.map((tx, i) => (
-          <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+        {currentTx.map((tx) => (
+          <div key={tx.id} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
                 <ArrowDownLeft className="h-4 w-4 text-destructive" />
               </div>
               <div>
                 <p className="text-sm font-medium">{tx.description}</p>
-                <p className="text-xs text-muted-foreground">{tx.card} · {tx.category} · {new Date(tx.date).toLocaleDateString("pt-BR")}</p>
+                <p className="text-xs text-muted-foreground">{tx.card} · {tx.category} · {new Date(tx.date).toLocaleDateString("pt-BR")} {tx.installmentPurchaseId ? `· Parcela ${tx.installmentNumber}/${currentTx.filter((i) => i.installmentPurchaseId === tx.installmentPurchaseId).length}` : ""}</p>
               </div>
             </div>
             <span className="text-mono text-sm font-medium text-destructive">

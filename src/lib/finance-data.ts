@@ -18,13 +18,41 @@ export interface CategoryBudget {
 }
 
 export interface Transaction {
+  id: string;
   date: string;
   description: string;
   amount: number;
   card: string;
   category: string;
   cycle: string;
+  installmentPurchaseId?: string;
+  installmentNumber?: number;
+  isPaid?: boolean;
 }
+
+export interface InstallmentPurchase {
+  id: string;
+  description: string;
+  totalValue: number;
+  totalInstallments: number;
+  paidInstallments: number;
+  installmentValue: number;
+  cardOriginId: string;
+  categoryId: string;
+  firstInstallmentDate: string;
+  nextInstallmentCycle: string;
+}
+
+export interface InstallmentPurchaseInput {
+  description: string;
+  totalValue: number;
+  totalInstallments: number;
+  cardOriginId: string;
+  categoryId: string;
+  firstInstallmentDate: string;
+}
+
+const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export const cards: Card[] = [
   { name: "Gui", limit: 5000, closingDay: 8, dueDay: 15 },
@@ -53,7 +81,7 @@ export const categoryBudgets: CategoryBudget[] = [
 
 export const referenceIncome = 9500;
 
-export const transactions: Transaction[] = [
+const seedTransactions: Omit<Transaction, "id">[] = [
   { date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
   { date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
   { date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
@@ -68,6 +96,18 @@ export const transactions: Transaction[] = [
   { date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
 ];
 
+export const transactions: Transaction[] = seedTransactions.map((tx, i) => ({
+  ...tx,
+  id: `seed-tx-${i + 1}`,
+  isPaid: true,
+}));
+
+export const installmentPurchases: InstallmentPurchase[] = [];
+
+export function createId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
+}
+
 export function getDaysUntilClosing(card: Card): number {
   const today = new Date();
   const day = today.getDate();
@@ -79,9 +119,67 @@ export function getDaysUntilClosing(card: Card): number {
 }
 
 export function getCurrentCycle(): string {
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const now = new Date();
   return `${months[now.getMonth()]}/${now.getFullYear()}`;
+}
+
+export function determineCycle(date: string, cardName: string, cardList: { name: string; closingDay: number }[]): string {
+  const card = cardList.find((c) => c.name === cardName);
+  if (!card) return getCurrentCycle();
+  const d = new Date(`${date}T12:00:00`);
+  const day = d.getDate();
+  if (day <= card.closingDay) {
+    return `${months[d.getMonth()]}/${d.getFullYear()}`;
+  }
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return `${months[next.getMonth()]}/${next.getFullYear()}`;
+}
+
+export function addMonthsToIsoDate(isoDate: string, monthsToAdd: number): string {
+  const base = new Date(`${isoDate}T12:00:00`);
+  const shifted = new Date(base.getFullYear(), base.getMonth() + monthsToAdd, base.getDate());
+  return shifted.toISOString().slice(0, 10);
+}
+
+export function createInstallmentBundle(
+  input: InstallmentPurchaseInput,
+  cardList: Card[]
+): { purchase: InstallmentPurchase; generatedTransactions: Transaction[] } {
+  const purchaseId = createId("ip");
+  const installmentValue = Number((input.totalValue / input.totalInstallments).toFixed(2));
+
+  const generatedTransactions: Transaction[] = Array.from({ length: input.totalInstallments }, (_, idx) => {
+    const installmentDate = addMonthsToIsoDate(input.firstInstallmentDate, idx);
+    const installmentNumber = idx + 1;
+
+    return {
+      id: createId("tx"),
+      date: installmentDate,
+      description: `${input.description} (${installmentNumber}/${input.totalInstallments})`,
+      amount: installmentValue,
+      card: input.cardOriginId,
+      category: input.categoryId,
+      cycle: determineCycle(installmentDate, input.cardOriginId, cardList),
+      installmentPurchaseId: purchaseId,
+      installmentNumber,
+      isPaid: false,
+    };
+  });
+
+  const purchase: InstallmentPurchase = {
+    id: purchaseId,
+    description: input.description.trim(),
+    totalValue: Number(input.totalValue.toFixed(2)),
+    totalInstallments: input.totalInstallments,
+    paidInstallments: 0,
+    installmentValue,
+    cardOriginId: input.cardOriginId,
+    categoryId: input.categoryId,
+    firstInstallmentDate: input.firstInstallmentDate,
+    nextInstallmentCycle: generatedTransactions[0]?.cycle ?? getCurrentCycle(),
+  };
+
+  return { purchase, generatedTransactions };
 }
 
 export function getCardTotal(cardName: string, cycle: string): number {
