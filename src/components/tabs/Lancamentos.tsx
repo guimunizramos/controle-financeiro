@@ -26,12 +26,24 @@ const MONTH_TO_INDEX: Record<string, number> = {
   Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
 };
 
-function addMonthsToCycle(baseCycle: string, monthsToAdd: number): string {
+export function addMonthsToCycle(baseCycle: string, monthsToAdd: number): string {
   const [monthLabel, yearLabel] = baseCycle.split("/");
   const month = MONTH_TO_INDEX[monthLabel] ?? 0;
   const year = Number.parseInt(yearLabel ?? "0", 10);
   const date = new Date(year, month + monthsToAdd, 1);
   return `${MONTHS[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+export function splitAmountIntoInstallments(totalAmount: number, installments: number): number[] {
+  const safeInstallments = Math.max(1, Math.trunc(installments));
+  const totalInCents = Math.round(totalAmount * 100);
+  const baseInstallmentInCents = Math.floor(totalInCents / safeInstallments);
+  const remainder = totalInCents - (baseInstallmentInCents * safeInstallments);
+
+  return Array.from({ length: safeInstallments }, (_, index) => {
+    const installmentInCents = baseInstallmentInCents + (index < remainder ? 1 : 0);
+    return installmentInCents / 100;
+  });
 }
 
 export function Lancamentos() {
@@ -60,21 +72,23 @@ export function Lancamentos() {
     const installments = Math.max(1, Number.parseInt(form.installments || "1", 10));
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
 
-    const amountPerInstallment = Number((parsedAmount / installments).toFixed(2));
+    const installmentAmounts = splitAmountIntoInstallments(parsedAmount, installments);
 
-    for (let installment = 1; installment <= installments; installment += 1) {
+    installmentAmounts.forEach((installmentAmount, index) => {
+      const installmentNumber = index + 1;
+
       addTransaction({
         date: form.date,
         description:
           installments > 1
-            ? `${form.description.trim()} (${installment}/${installments})`
+            ? `${form.description.trim()} (${installmentNumber}/${installments})`
             : form.description.trim(),
-        amount: amountPerInstallment,
+        amount: installmentAmount,
         card: form.card,
         category: "Caixa",
-        cycle: addMonthsToCycle(selectedCycle, installment - 1),
+        cycle: addMonthsToCycle(selectedCycle, index),
       });
-    }
+    });
 
     setForm({
       date: new Date().toISOString().slice(0, 10),
