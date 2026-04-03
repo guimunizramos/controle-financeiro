@@ -15,6 +15,7 @@ interface FinanceState {
   categoryBudgets: CategoryBudget[];
   transactions: Transaction[];
   referenceIncome: number;
+  selectedCycle: string;
 }
 
 interface FinanceContextType extends FinanceState {
@@ -31,6 +32,8 @@ interface FinanceContextType extends FinanceState {
   updateTransaction: (index: number, tx: Transaction) => void;
   removeTransaction: (index: number) => void;
   setReferenceIncome: (value: number) => void;
+  setSelectedCycle: (cycle: string) => void;
+  availableCycles: string[];
   getCardTotal: (cardName: string, cycle: string) => number;
   getCategoryTotal: (categoryName: string, cycle: string) => number;
   getAvailableCash: () => number;
@@ -39,11 +42,32 @@ interface FinanceContextType extends FinanceState {
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
 const STORAGE_KEY = "cycle-finance-data";
+const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
+  Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
+};
+
+function cycleToKey(cycle: string): number {
+  const [monthLabel, yearLabel] = cycle.split("/");
+  const month = MONTH_INDEX[monthLabel] ?? 0;
+  const year = Number.parseInt(yearLabel ?? "0", 10);
+  return year * 12 + month;
+}
 
 function loadState(): FinanceState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<FinanceState>;
+      return {
+        cards: parsed.cards ?? defaultCards,
+        fixedExpenses: parsed.fixedExpenses ?? defaultFixed,
+        categoryBudgets: parsed.categoryBudgets ?? defaultBudgets,
+        transactions: parsed.transactions ?? defaultTransactions,
+        referenceIncome: parsed.referenceIncome ?? defaultIncome,
+        selectedCycle: parsed.selectedCycle ?? getCurrentCycle(),
+      };
+    }
   } catch {}
   return {
     cards: defaultCards,
@@ -51,6 +75,7 @@ function loadState(): FinanceState {
     categoryBudgets: defaultBudgets,
     transactions: defaultTransactions,
     referenceIncome: defaultIncome,
+    selectedCycle: getCurrentCycle(),
   };
 }
 
@@ -104,6 +129,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const setReferenceIncome = useCallback((value: number) => {
     setState((s) => ({ ...s, referenceIncome: value }));
   }, []);
+  const setSelectedCycle = useCallback((cycle: string) => {
+    setState((s) => ({ ...s, selectedCycle: cycle }));
+  }, []);
 
   const getCardTotal = useCallback(
     (cardName: string, cycle: string) =>
@@ -118,11 +146,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAvailableCash = useCallback(() => {
-    const cycle = getCurrentCycle();
+    const cycle = state.selectedCycle;
     const totalInvoices = state.cards.reduce((sum, c) => sum + state.transactions.filter((t) => t.card === c.name && t.cycle === cycle).reduce((s, t) => s + t.amount, 0), 0);
     const totalFixed = state.fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
     return state.referenceIncome - totalInvoices - totalFixed;
   }, [state]);
+
+  const availableCycles = [...new Set([...state.transactions.map((tx) => tx.cycle), getCurrentCycle()])]
+    .sort((a, b) => cycleToKey(b) - cycleToKey(a));
+
+  useEffect(() => {
+    if (availableCycles.length === 0) return;
+    if (!availableCycles.includes(state.selectedCycle)) {
+      setState((s) => ({ ...s, selectedCycle: availableCycles[0] }));
+    }
+  }, [availableCycles, state.selectedCycle]);
 
   const value: FinanceContextType = {
     ...state,
@@ -130,7 +168,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     addFixedExpense, updateFixedExpense, removeFixedExpense,
     addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
     addTransaction, updateTransaction, removeTransaction,
-    setReferenceIncome,
+    setReferenceIncome, setSelectedCycle,
+    availableCycles,
     getCardTotal, getCategoryTotal, getAvailableCash,
   };
 
