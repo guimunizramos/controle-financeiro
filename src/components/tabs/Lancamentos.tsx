@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { addMonthsToCycle, formatCurrency } from "@/lib/finance-data";
+import { addMonthsToCycle, formatCurrency, getCardLabel } from "@/lib/finance-data";
 import { ArrowDownLeft, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,11 +150,14 @@ export function Lancamentos() {
                 <Input placeholder="Ex: iFood, Uber, Supermercado..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-secondary border-border" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Cartão (Origem)</Label>
+                <Label className="text-xs">Nome + Cartão</Label>
                 <Select value={form.card} onValueChange={(v) => setForm({ ...form, card: v })}>
                   <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="bg-card border-border">
-                    {cards.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                    {cards.map((c, idx) => {
+                      const label = getCardLabel(c);
+                      return <SelectItem key={`${label}-${idx}`} value={label}>{label}</SelectItem>;
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -171,14 +174,14 @@ export function Lancamentos() {
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Ciclo {selectedCycle}</h3>
           <span className="text-mono text-sm font-semibold text-destructive">-{formatCurrency(cycleTotal)}</span>
         </div>
-        <div className="hidden md:grid grid-cols-[1fr_100px_80px_110px_100px_40px] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b">
+        <div className="hidden md:grid grid-cols-[1fr_100px_160px_110px_100px_40px] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b">
           <span>Descrição</span><span>Valor</span><span>Cartão</span><span>Categoria</span><span>Data</span><span></span>
         </div>
         <div className="divide-y divide-border/50">
           {cycleTx.map((tx) => {
             const globalIdx = transactions.indexOf(tx);
             return (
-              <div key={tx.id} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_80px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
+              <div key={tx.id} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_160px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
                 <div className="flex items-center gap-3">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary md:hidden">
                     <ArrowDownLeft className="h-3.5 w-3.5 text-destructive" />

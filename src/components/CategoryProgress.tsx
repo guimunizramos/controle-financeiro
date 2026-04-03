@@ -18,7 +18,7 @@ export function CategoryProgress() {
 
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
-      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Categorias · {cycle}</h3>
+      <h3 className="font-bold text-sm text-white uppercase tracking-wider">Categorias · {cycle}</h3>
       <div className="space-y-3">
         {categories.map((cat) => (
           <div key={cat.name} className="space-y-1.5">

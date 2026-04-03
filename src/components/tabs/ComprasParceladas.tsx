@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, MONTH_INDEX, MONTHS } from "@/lib/finance-data";
+import { formatCurrency, getCardLabel, MONTH_INDEX, MONTHS } from "@/lib/finance-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,7 +100,10 @@ export function ComprasParceladas() {
                   <Select value={form.cardOriginId} onValueChange={(v) => setForm({ ...form, cardOriginId: v })}>
                     <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent className="bg-card border-border">
-                      {cards.map((card) => <SelectItem key={card.name} value={card.name}>{card.name}</SelectItem>)}
+                      {cards.map((card, idx) => {
+                        const label = getCardLabel(card);
+                        return <SelectItem key={`${label}-${idx}`} value={label}>{label}</SelectItem>;
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -129,15 +132,21 @@ export function ComprasParceladas() {
           const remainingInstallments = purchase.totalInstallments - purchase.paidInstallments;
           const progress = purchase.totalInstallments > 0 ? (purchase.paidInstallments / purchase.totalInstallments) * 100 : 0;
           return (
-            <div key={purchase.id} className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider">Compra Parcelada</p>
-              <h3 className="text-base font-semibold">{purchase.description}</h3>
-              <div className="space-y-1 text-sm">
-                <p>Valor Total: <span className="text-primary">{formatCurrency(purchase.totalValue)}</span></p>
-                <p>Valor Parcela: <span className="text-primary">{formatCurrency(purchase.installmentValue)}</span></p>
-                <p>Parcelas Pagas: {purchase.paidInstallments}/{purchase.totalInstallments}</p>
-                <p>Parcelas Restantes: {remainingInstallments}</p>
-                <p>Mês da última parcela: {cycleToLongLabel(purchase.lastInstallmentCycle)}</p>
+            <div key={purchase.id} className="rounded-xl border border-border bg-card p-5 space-y-4 relative">
+              <span className="absolute right-4 top-4 inline-flex items-center rounded-full bg-primary/20 text-primary px-2.5 py-1 text-xs font-semibold">
+                {purchase.paidInstallments}/{purchase.totalInstallments} pagas
+              </span>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Compra Parcelada</p>
+              <h3 className="text-base font-semibold text-white pr-28">{purchase.description}</h3>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <p className="text-muted-foreground">Valor total</p>
+                <p className="text-right text-primary font-semibold">{formatCurrency(purchase.totalValue)}</p>
+                <p className="text-muted-foreground">Valor parcela</p>
+                <p className="text-right text-primary font-semibold">{formatCurrency(purchase.installmentValue)}</p>
+                <p className="text-muted-foreground">Restantes</p>
+                <p className="text-right">{remainingInstallments}</p>
+                <p className="text-muted-foreground">Última parcela</p>
+                <p className="text-right">{cycleToLongLabel(purchase.lastInstallmentCycle)}</p>
               </div>
               <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(progress, 100)}%` }} />
