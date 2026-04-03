@@ -1,10 +1,9 @@
-import { CashCard } from "@/components/CashCard";
-import { CategoryProgress } from "@/components/CategoryProgress";
-import { FixedExpenses } from "@/components/FixedExpenses";
-import { InvoiceCard } from "@/components/InvoiceCard";
-import { TransactionList } from "@/components/TransactionList";
 import { cards, getDaysUntilClosing } from "@/lib/finance-data";
-import { Activity } from "lucide-react";
+import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VisaoGeral } from "@/components/tabs/VisaoGeral";
+import { Lancamentos } from "@/components/tabs/Lancamentos";
+import { Configuracoes } from "@/components/tabs/Configuracoes";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -19,7 +18,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -29,32 +27,49 @@ const Index = () => {
             <div>
               <h1 className="text-lg font-bold tracking-tight">Cycle Finance</h1>
               <p className="text-xs text-muted-foreground">
-                {getGreeting()}, Gui! · Cartão Gui fecha em <span className="text-primary font-medium">{daysLeft} dias</span>
+                {getGreeting()}, Gui! · Cartão Gui fecha em{" "}
+                <span className="text-primary font-medium">{daysLeft} dias</span>
               </p>
             </div>
           </div>
           <div className="text-mono text-xs text-muted-foreground">
-            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
+            {new Date().toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
           </div>
         </div>
       </header>
 
-      {/* Dashboard */}
-      <main className="container max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Top row: Cash + Invoices */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <CashCard />
-          {cards.map((card) => (
-            <InvoiceCard key={card.name} card={card} />
-          ))}
-        </div>
+      <main className="container max-w-6xl mx-auto px-4 py-6">
+        <Tabs defaultValue="visao-geral" className="space-y-6">
+          <TabsList className="bg-secondary/50 border border-border">
+            <TabsTrigger value="visao-geral" className="gap-1.5 data-[state=active]:text-primary">
+              <LayoutDashboard className="h-4 w-4" />
+              Visão Geral
+            </TabsTrigger>
+            <TabsTrigger value="lancamentos" className="gap-1.5 data-[state=active]:text-primary">
+              <List className="h-4 w-4" />
+              Lançamentos
+            </TabsTrigger>
+            <TabsTrigger value="configuracoes" className="gap-1.5 data-[state=active]:text-primary">
+              <Settings className="h-4 w-4" />
+              Configurações
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Bottom row: Categories + Transactions + Fixed */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <CategoryProgress />
-          <TransactionList />
-          <FixedExpenses />
-        </div>
+          <TabsContent value="visao-geral">
+            <VisaoGeral />
+          </TabsContent>
+          <TabsContent value="lancamentos">
+            <Lancamentos />
+          </TabsContent>
+          <TabsContent value="configuracoes">
+            <Configuracoes />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
