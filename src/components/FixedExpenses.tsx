@@ -1,7 +1,9 @@
-import { fixedExpenses, formatCurrency } from "@/lib/finance-data";
+import { useFinance } from "@/contexts/FinanceContext";
+import { formatCurrency } from "@/lib/finance-data";
 import { CalendarClock } from "lucide-react";
 
 export function FixedExpenses() {
+  const { fixedExpenses } = useFinance();
   const total = fixedExpenses.reduce((s, e) => s + e.amount, 0);
 
   return (

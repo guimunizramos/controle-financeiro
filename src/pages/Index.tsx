@@ -1,4 +1,5 @@
-import { cards, getDaysUntilClosing } from "@/lib/finance-data";
+import { useFinance } from "@/contexts/FinanceContext";
+import { getDaysUntilClosing } from "@/lib/finance-data";
 import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
@@ -13,8 +14,9 @@ function getGreeting(): string {
 }
 
 const Index = () => {
-  const guiCard = cards.find((c) => c.name === "Gui")!;
-  const daysLeft = getDaysUntilClosing(guiCard);
+  const { cards } = useFinance();
+  const guiCard = cards.find((c) => c.name === "Gui");
+  const daysLeft = guiCard ? getDaysUntilClosing(guiCard) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,18 +29,15 @@ const Index = () => {
             <div>
               <h1 className="text-lg font-bold tracking-tight">Cycle Finance</h1>
               <p className="text-xs text-muted-foreground">
-                {getGreeting()}, Gui! · Cartão Gui fecha em{" "}
-                <span className="text-primary font-medium">{daysLeft} dias</span>
+                {getGreeting()}, Gui!
+                {guiCard && daysLeft !== null && (
+                  <> · Cartão Gui fecha em <span className="text-primary font-medium">{daysLeft} dias</span></>
+                )}
               </p>
             </div>
           </div>
           <div className="text-mono text-xs text-muted-foreground">
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
+            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
           </div>
         </div>
       </header>

@@ -1,4 +1,6 @@
-import { Card, formatCurrency, getCardTotal, getCurrentCycle, getDaysUntilClosing, getStatusTag } from "@/lib/finance-data";
+import { useFinance } from "@/contexts/FinanceContext";
+import { formatCurrency, getCurrentCycle, getDaysUntilClosing, getStatusTag } from "@/lib/finance-data";
+import type { Card } from "@/lib/finance-data";
 import { CreditCard } from "lucide-react";
 
 const statusStyles = {
@@ -14,6 +16,7 @@ const barStyles = {
 } as const;
 
 export function InvoiceCard({ card }: { card: Card }) {
+  const { getCardTotal } = useFinance();
   const cycle = getCurrentCycle();
   const total = getCardTotal(card.name, cycle);
   const pct = (total / card.limit) * 100;
@@ -31,7 +34,6 @@ export function InvoiceCard({ card }: { card: Card }) {
           {status.label}
         </span>
       </div>
-
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-mono font-semibold">{formatCurrency(total)}</span>

@@ -1,26 +1,21 @@
-import { categoryBudgets, formatCurrency, getCategoryTotal, getCurrentCycle, getStatusTag } from "@/lib/finance-data";
+import { useFinance } from "@/contexts/FinanceContext";
+import { formatCurrency, getCurrentCycle, getStatusTag } from "@/lib/finance-data";
 
-const barStyles = {
-  ok: "bg-primary",
-  warning: "bg-warning",
-  alert: "bg-destructive",
-} as const;
-
-const dotStyles = {
-  ok: "bg-primary",
-  warning: "bg-warning",
-  alert: "bg-destructive",
-} as const;
+const barStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destructive" } as const;
+const dotStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destructive" } as const;
 
 export function CategoryProgress() {
+  const { categoryBudgets, getCategoryTotal } = useFinance();
   const cycle = getCurrentCycle();
 
-  const categories = categoryBudgets.map((cat) => {
-    const spent = getCategoryTotal(cat.name, cycle);
-    const pct = cat.limit > 0 ? (spent / cat.limit) * 100 : 0;
-    const status = getStatusTag(pct);
-    return { ...cat, spent, pct, status };
-  }).sort((a, b) => b.pct - a.pct);
+  const categories = categoryBudgets
+    .map((cat) => {
+      const spent = getCategoryTotal(cat.name, cycle);
+      const pct = cat.limit > 0 ? (spent / cat.limit) * 100 : 0;
+      const status = getStatusTag(pct);
+      return { ...cat, spent, pct, status };
+    })
+    .sort((a, b) => b.pct - a.pct);
 
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
