@@ -164,8 +164,12 @@ export function clearLegacyLocalState() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+function saveLocalState(state: FinanceState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
 export async function fetchFinanceState(): Promise<FinanceState | null> {
-  if (!supabase || !hasSupabaseEnv) return null;
+  if (!supabase || !hasSupabaseEnv) return getLegacyLocalState();
 
   const [configResult, transactionsResult, installmentsResult] = await Promise.all([
     supabase.from("configurations").select("*").eq("id", CONFIG_ID).maybeSingle<ConfigurationRow>(),
@@ -182,7 +186,10 @@ export async function fetchFinanceState(): Promise<FinanceState | null> {
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
-  if (!supabase || !hasSupabaseEnv) return;
+  if (!supabase || !hasSupabaseEnv) {
+    saveLocalState(state);
+    return;
+  }
 
   const cards = state.cards.map((card) => ({ ...card }));
   const fixedExpenses = state.fixedExpenses.map((expense) => ({ ...expense }));
