@@ -125,7 +125,7 @@ export function Configuracoes() {
   } = useFinance();
 
   const editableCategories = useMemo(
-    () => categoryBudgets.map((cat, index) => ({ ...cat, index })).filter((cat) => !cat.isFixed),
+    () => categoryBudgets.filter((cat) => !cat.isFixed).map((cat, index) => ({ ...cat, index })),
     [categoryBudgets]
   );
   const caixaCategory = categoryBudgets.find((cat) => cat.name === "Caixa");
