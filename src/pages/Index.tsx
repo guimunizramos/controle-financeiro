@@ -4,6 +4,7 @@ import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
 import { ComprasParceladas } from "@/components/tabs/ComprasParceladas";
+import { useFinance } from "@/contexts/FinanceContext";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -13,6 +14,16 @@ function getGreeting(): string {
 }
 
 const Index = () => {
+  const { isLoading } = useFinance();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">Carregando seus dados financeiros...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
