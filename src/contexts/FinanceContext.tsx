@@ -1,28 +1,21 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import type { Card, FixedExpense, CategoryBudget, Transaction, InstallmentPurchase } from "@/lib/finance-data";
 import {
-  cards as defaultCards,
-  fixedExpenses as defaultFixed,
-  categoryBudgets as defaultBudgets,
-  transactions as defaultTransactions,
-  installmentPurchases as defaultInstallmentPurchases,
-  referenceIncome as defaultIncome,
   getCurrentCycle,
   addMonthsToCycle,
   getCycleFromDate,
   splitAmountIntoInstallments,
   getCardOwnerFromLabel,
 } from "@/lib/finance-data";
-
-interface FinanceState {
-  cards: Card[];
-  fixedExpenses: FixedExpense[];
-  categoryBudgets: CategoryBudget[];
-  transactions: Transaction[];
-  installmentPurchases: InstallmentPurchase[];
-  referenceIncome: number;
-  selectedCycle: string;
-}
+import {
+  createEntityId,
+  defaultFinanceState,
+  fetchFinanceState,
+  saveFinanceState,
+  getLegacyLocalState,
+  clearLegacyLocalState,
+  type FinanceState,
+} from "@/lib/finance-storage";
 
 interface AddInstallmentPurchaseInput {
   description: string;
@@ -34,6 +27,7 @@ interface AddInstallmentPurchaseInput {
 }
 
 interface FinanceContextType extends FinanceState {
+  isLoading: boolean;
   addCard: (card: Card) => void;
   updateCard: (index: number, card: Card) => void;
   removeCard: (index: number) => void;
@@ -58,7 +52,6 @@ interface FinanceContextType extends FinanceState {
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
-const STORAGE_KEY = "cycle-finance-data";
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
   Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
@@ -71,59 +64,52 @@ function cycleToKey(cycle: string): number {
   return year * 12 + month;
 }
 
-function createId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function loadState(): FinanceState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<FinanceState>;
-      const migratedCards = (parsed.cards ?? defaultCards).map((card) => {
-        const legacyCard = card as { name?: string; owner?: string; bank?: string; limit: number; closingDay: number; dueDay: number };
-        return {
-          owner: legacyCard.owner ?? legacyCard.name ?? "Sem nome",
-          bank: legacyCard.bank ?? "Principal",
-          limit: legacyCard.limit,
-          closingDay: legacyCard.closingDay,
-          dueDay: legacyCard.dueDay,
-        };
-      });
-      const migratedTransactions = (parsed.transactions ?? defaultTransactions).map((tx) => {
-        const hasCardSeparator = tx.card.includes("•");
-        return {
-          ...tx,
-          card: hasCardSeparator ? tx.card : `${tx.card} • Principal`,
-        };
-      });
-
-      return {
-        cards: migratedCards,
-        fixedExpenses: parsed.fixedExpenses ?? defaultFixed,
-        categoryBudgets: (parsed.categoryBudgets ?? defaultBudgets).filter((c) => c.name !== "Caixa"),
-        transactions: migratedTransactions,
-        installmentPurchases: parsed.installmentPurchases ?? defaultInstallmentPurchases,
-        referenceIncome: parsed.referenceIncome ?? defaultIncome,
-        selectedCycle: parsed.selectedCycle ?? getCurrentCycle(),
-      };
-    }
-  } catch {
-    // noop
-  }
-  return {
-    cards: defaultCards,
-    fixedExpenses: defaultFixed,
-    categoryBudgets: defaultBudgets,
-    transactions: defaultTransactions,
-    installmentPurchases: defaultInstallmentPurchases,
-    referenceIncome: defaultIncome,
-    selectedCycle: getCurrentCycle(),
-  };
-}
-
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<FinanceState>(loadState);
+  const [state, setState] = useState<FinanceState>(defaultFinanceState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedFromRemote, setHasLoadedFromRemote] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const initialize = async () => {
+      try {
+        const dbState = await fetchFinanceState();
+        if (!active) return;
+
+        if (dbState) {
+          setState(dbState);
+          setHasLoadedFromRemote(true);
+          return;
+        }
+
+        const legacyState = getLegacyLocalState();
+        if (legacyState) {
+          setState(legacyState);
+          await saveFinanceState(legacyState);
+          clearLegacyLocalState();
+          setHasLoadedFromRemote(true);
+          return;
+        }
+
+        await saveFinanceState(defaultFinanceState);
+        setState(defaultFinanceState);
+        setHasLoadedFromRemote(true);
+      } catch (error) {
+        console.error("Erro ao carregar dados financeiros:", error);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const categoryBudgets = useMemo(() => {
     const sumBudgets = state.categoryBudgets.reduce((sum, cat) => sum + cat.limit, 0);
@@ -132,8 +118,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [state.categoryBudgets, state.referenceIncome]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, categoryBudgets: state.categoryBudgets }));
-  }, [state]);
+    if (!hasLoadedFromRemote) return;
+    void saveFinanceState({ ...state, categoryBudgets: state.categoryBudgets });
+  }, [state, hasLoadedFromRemote]);
 
   const addCard = useCallback((card: Card) => {
     setState((s) => ({ ...s, cards: [...s.cards, card] }));
@@ -167,7 +154,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTransaction = useCallback((tx: Omit<Transaction, "id">) => {
-    setState((s) => ({ ...s, transactions: [...s.transactions, { ...tx, id: createId("tx") }] }));
+    setState((s) => ({ ...s, transactions: [...s.transactions, { ...tx, id: createEntityId() }] }));
   }, []);
   const updateTransaction = useCallback((i: number, tx: Transaction) => {
     setState((s) => ({ ...s, transactions: s.transactions.map((x, idx) => (idx === i ? tx : x)) }));
@@ -180,10 +167,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setState((s) => {
       const installmentValues = splitAmountIntoInstallments(input.totalValue, input.totalInstallments);
       const firstCycle = getCycleFromDate(input.firstInstallmentDate);
-      const purchaseId = createId("inst");
+      const purchaseId = createEntityId();
 
       const generatedTransactions: Transaction[] = installmentValues.map((value, index) => ({
-        id: createId("tx"),
+        id: createEntityId(),
         date: input.firstInstallmentDate,
         description: `${input.description} (${index + 1}/${input.totalInstallments})`,
         amount: value,
@@ -273,6 +260,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const value: FinanceContextType = {
     ...state,
+    isLoading,
     categoryBudgets,
     addCard, updateCard, removeCard,
     addFixedExpense, updateFixedExpense, removeFixedExpense,
