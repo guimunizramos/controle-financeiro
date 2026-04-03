@@ -1,9 +1,10 @@
 import { useFinance } from "@/contexts/FinanceContext";
 import { getDaysUntilClosing } from "@/lib/finance-data";
-import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
+import { Activity, LayoutDashboard, List, ReceiptText, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
+import { ComprasParceladas } from "@/components/tabs/ComprasParceladas";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
 
 function getGreeting(): string {
@@ -53,6 +54,10 @@ const Index = () => {
               <List className="h-4 w-4" />
               Lançamentos
             </TabsTrigger>
+            <TabsTrigger value="compras-parceladas" className="gap-1.5 data-[state=active]:text-primary">
+              <ReceiptText className="h-4 w-4" />
+              Compras Parceladas
+            </TabsTrigger>
             <TabsTrigger value="configuracoes" className="gap-1.5 data-[state=active]:text-primary">
               <Settings className="h-4 w-4" />
               Configurações
@@ -64,6 +69,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="lancamentos">
             <Lancamentos />
+          </TabsContent>
+          <TabsContent value="compras-parceladas">
+            <ComprasParceladas />
           </TabsContent>
           <TabsContent value="configuracoes">
             <Configuracoes />
