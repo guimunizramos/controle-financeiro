@@ -6,6 +6,7 @@ import {
   categoryBudgets as defaultBudgets,
   transactions as defaultTransactions,
   referenceIncome as defaultIncome,
+  getCurrentCycle,
 } from "@/lib/finance-data";
 
 interface FinanceState {
@@ -17,25 +18,19 @@ interface FinanceState {
 }
 
 interface FinanceContextType extends FinanceState {
-  // Cards
   addCard: (card: Card) => void;
   updateCard: (index: number, card: Card) => void;
   removeCard: (index: number) => void;
-  // Fixed Expenses
   addFixedExpense: (expense: FixedExpense) => void;
   updateFixedExpense: (index: number, expense: FixedExpense) => void;
   removeFixedExpense: (index: number) => void;
-  // Category Budgets
   addCategoryBudget: (budget: CategoryBudget) => void;
   updateCategoryBudget: (index: number, budget: CategoryBudget) => void;
   removeCategoryBudget: (index: number) => void;
-  // Transactions
   addTransaction: (tx: Transaction) => void;
   updateTransaction: (index: number, tx: Transaction) => void;
   removeTransaction: (index: number) => void;
-  // Reference Income
   setReferenceIncome: (value: number) => void;
-  // Helpers (use context data)
   getCardTotal: (cardName: string, cycle: string) => number;
   getCategoryTotal: (categoryName: string, cycle: string) => number;
   getAvailableCash: () => number;
@@ -66,11 +61,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const update = useCallback((partial: Partial<FinanceState>) => {
-    setState((prev) => ({ ...prev, ...partial }));
-  }, []);
-
-  // Cards
   const addCard = useCallback((card: Card) => {
     setState((s) => ({ ...s, cards: [...s.cards, card] }));
   }, []);
@@ -81,7 +71,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, cards: s.cards.filter((_, idx) => idx !== i) }));
   }, []);
 
-  // Fixed
   const addFixedExpense = useCallback((e: FixedExpense) => {
     setState((s) => ({ ...s, fixedExpenses: [...s.fixedExpenses, e] }));
   }, []);
@@ -92,7 +81,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, fixedExpenses: s.fixedExpenses.filter((_, idx) => idx !== i) }));
   }, []);
 
-  // Budgets
   const addCategoryBudget = useCallback((b: CategoryBudget) => {
     setState((s) => ({ ...s, categoryBudgets: [...s.categoryBudgets, b] }));
   }, []);
@@ -103,7 +91,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
   }, []);
 
-  // Transactions
   const addTransaction = useCallback((tx: Transaction) => {
     setState((s) => ({ ...s, transactions: [...s.transactions, tx] }));
   }, []);
@@ -118,7 +105,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, referenceIncome: value }));
   }, []);
 
-  // Helpers
   const getCardTotal = useCallback(
     (cardName: string, cycle: string) =>
       state.transactions.filter((t) => t.card === cardName && t.cycle === cycle).reduce((s, t) => s + t.amount, 0),
@@ -132,12 +118,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAvailableCash = useCallback(() => {
-    const { getCurrentCycle } = require("@/lib/finance-data");
     const cycle = getCurrentCycle();
-    const totalInvoices = state.cards.reduce((sum, c) => sum + getCardTotal(c.name, cycle), 0);
+    const totalInvoices = state.cards.reduce((sum, c) => sum + state.transactions.filter((t) => t.card === c.name && t.cycle === cycle).reduce((s, t) => s + t.amount, 0), 0);
     const totalFixed = state.fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
     return state.referenceIncome - totalInvoices - totalFixed;
-  }, [state, getCardTotal]);
+  }, [state]);
 
   const value: FinanceContextType = {
     ...state,

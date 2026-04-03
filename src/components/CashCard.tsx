@@ -1,7 +1,9 @@
-import { formatCurrency, getAvailableCash, referenceIncome } from "@/lib/finance-data";
+import { useFinance } from "@/contexts/FinanceContext";
+import { formatCurrency } from "@/lib/finance-data";
 import { Wallet } from "lucide-react";
 
 export function CashCard() {
+  const { getAvailableCash, referenceIncome } = useFinance();
   const cash = getAvailableCash();
   const pct = ((cash / referenceIncome) * 100).toFixed(1);
 
