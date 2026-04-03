@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import type { Card, FixedExpense, CategoryBudget, Transaction } from "@/lib/finance-data";
+import type { Card, FixedExpense, CategoryBudget, Transaction, InstallmentPurchase } from "@/lib/finance-data";
 import {
   cards as defaultCards,
   fixedExpenses as defaultFixed,
@@ -13,6 +13,7 @@ interface FinanceState {
   cards: Card[];
   fixedExpenses: FixedExpense[];
   categoryBudgets: CategoryBudget[];
+  installmentPurchases: InstallmentPurchase[];
   transactions: Transaction[];
   referenceIncome: number;
   selectedCycle: string;
@@ -28,6 +29,7 @@ interface FinanceContextType extends FinanceState {
   addCategoryBudget: (budget: CategoryBudget) => void;
   updateCategoryBudget: (index: number, budget: CategoryBudget) => void;
   removeCategoryBudget: (index: number) => void;
+  addInstallmentPurchase: (purchase: InstallmentPurchase, generatedTransactions: Transaction[]) => void;
   addTransaction: (tx: Transaction) => void;
   updateTransaction: (index: number, tx: Transaction) => void;
   removeTransaction: (index: number) => void;
@@ -37,6 +39,7 @@ interface FinanceContextType extends FinanceState {
   getCardTotal: (cardName: string, cycle: string) => number;
   getCategoryTotal: (categoryName: string, cycle: string) => number;
   getAvailableCash: () => number;
+  getCaixaCategoryLimit: () => number;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -62,7 +65,8 @@ function loadState(): FinanceState {
       return {
         cards: parsed.cards ?? defaultCards,
         fixedExpenses: parsed.fixedExpenses ?? defaultFixed,
-        categoryBudgets: parsed.categoryBudgets ?? defaultBudgets,
+        categoryBudgets: (parsed.categoryBudgets ?? defaultBudgets).filter((category) => category.name !== "Caixa"),
+        installmentPurchases: parsed.installmentPurchases ?? [],
         transactions: parsed.transactions ?? defaultTransactions,
         referenceIncome: parsed.referenceIncome ?? defaultIncome,
         selectedCycle: parsed.selectedCycle ?? getCurrentCycle(),
@@ -72,7 +76,8 @@ function loadState(): FinanceState {
   return {
     cards: defaultCards,
     fixedExpenses: defaultFixed,
-    categoryBudgets: defaultBudgets,
+    categoryBudgets: defaultBudgets.filter((category) => category.name !== "Caixa"),
+    installmentPurchases: [],
     transactions: defaultTransactions,
     referenceIncome: defaultIncome,
     selectedCycle: getCurrentCycle(),
@@ -107,6 +112,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCategoryBudget = useCallback((b: CategoryBudget) => {
+    if (b.name.trim().toLowerCase() === "caixa") return;
     setState((s) => ({ ...s, categoryBudgets: [...s.categoryBudgets, b] }));
   }, []);
   const updateCategoryBudget = useCallback((i: number, b: CategoryBudget) => {
@@ -114,6 +120,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const removeCategoryBudget = useCallback((i: number) => {
     setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
+  }, []);
+
+  const addInstallmentPurchase = useCallback((purchase: InstallmentPurchase, generatedTransactions: Transaction[]) => {
+    setState((s) => ({
+      ...s,
+      installmentPurchases: [...s.installmentPurchases, purchase],
+      transactions: [...s.transactions, ...generatedTransactions],
+    }));
   }, []);
 
   const addTransaction = useCallback((tx: Transaction) => {
@@ -146,11 +160,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAvailableCash = useCallback(() => {
-    const cycle = state.selectedCycle;
-    const totalInvoices = state.cards.reduce((sum, c) => sum + state.transactions.filter((t) => t.card === c.name && t.cycle === cycle).reduce((s, t) => s + t.amount, 0), 0);
-    const totalFixed = state.fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
-    return state.referenceIncome - totalInvoices - totalFixed;
+    const totalCategoryLimits = state.categoryBudgets.reduce((sum, category) => sum + category.limit, 0);
+    return state.referenceIncome - totalCategoryLimits;
   }, [state]);
+
+  const getCaixaCategoryLimit = useCallback(() => getAvailableCash(), [getAvailableCash]);
 
   const availableCycles = [...new Set([...state.transactions.map((tx) => tx.cycle), getCurrentCycle()])]
     .sort((a, b) => cycleToKey(b) - cycleToKey(a));
@@ -167,10 +181,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     addCard, updateCard, removeCard,
     addFixedExpense, updateFixedExpense, removeFixedExpense,
     addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
+    addInstallmentPurchase,
     addTransaction, updateTransaction, removeTransaction,
     setReferenceIncome, setSelectedCycle,
     availableCycles,
-    getCardTotal, getCategoryTotal, getAvailableCash,
+    getCardTotal, getCategoryTotal, getAvailableCash, getCaixaCategoryLimit,
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

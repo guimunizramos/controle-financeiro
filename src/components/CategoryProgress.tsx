@@ -5,9 +5,10 @@ const barStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destruct
 const dotStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destructive" } as const;
 
 export function CategoryProgress() {
-  const { categoryBudgets, getCategoryTotal, selectedCycle: cycle } = useFinance();
+  const { categoryBudgets, getCategoryTotal, selectedCycle: cycle, getCaixaCategoryLimit } = useFinance();
+  const budgetWithCaixa = [{ name: "Caixa", limit: getCaixaCategoryLimit() }, ...categoryBudgets];
 
-  const categories = categoryBudgets
+  const categories = budgetWithCaixa
     .map((cat) => {
       const spent = getCategoryTotal(cat.name, cycle);
       const pct = cat.limit > 0 ? (spent / cat.limit) * 100 : 0;

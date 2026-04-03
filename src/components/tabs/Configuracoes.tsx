@@ -40,6 +40,7 @@ export function Configuracoes() {
     cards, addCard, updateCard, removeCard,
     fixedExpenses, addFixedExpense, updateFixedExpense, removeFixedExpense,
     categoryBudgets, addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
+    getCaixaCategoryLimit,
   } = useFinance();
 
   // --- Add dialogs state ---
@@ -64,10 +65,13 @@ export function Configuracoes() {
   };
   const submitCat = () => {
     if (!catForm.name || !catForm.limit) return;
+    if (catForm.name.trim().toLowerCase() === "caixa") return;
     addCategoryBudget({ name: catForm.name.trim(), limit: parseFloat(catForm.limit) });
     setCatForm({ name: "", limit: "" });
     setCatOpen(false);
   };
+
+  const caixaLimit = getCaixaCategoryLimit();
 
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeDraft, setIncomeDraft] = useState(String(referenceIncome));
@@ -202,6 +206,10 @@ export function Configuracoes() {
             </Dialog>
           </div>
           <div className="space-y-1">
+            <div className="flex items-center justify-between py-2.5 border-b border-border/50">
+              <span className="text-sm font-medium">Caixa</span>
+              <span className="text-mono text-sm text-primary">{formatCurrency(caixaLimit)}</span>
+            </div>
             {categoryBudgets.map((cat, i) => (
               <div key={i} className="group flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
                 <span className="text-sm">{cat.name}</span>

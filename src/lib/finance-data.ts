@@ -18,12 +18,26 @@ export interface CategoryBudget {
 }
 
 export interface Transaction {
+  id?: string;
   date: string;
   description: string;
   amount: number;
   card: string;
   category: string;
   cycle: string;
+  installmentPurchaseId?: string;
+}
+
+export interface InstallmentPurchase {
+  id: string;
+  description: string;
+  total_value: number;
+  total_installments: number;
+  paid_installments: number;
+  installment_value: number;
+  card_origin_id: string;
+  category_id: string;
+  first_installment_date: string;
 }
 
 export const cards: Card[] = [
@@ -41,7 +55,6 @@ export const fixedExpenses: FixedExpense[] = [
 ];
 
 export const categoryBudgets: CategoryBudget[] = [
-  { name: "Caixa", limit: 1500 },
   { name: "Alimentação", limit: 800 },
   { name: "Supermercado", limit: 1200 },
   { name: "Carro", limit: 500 },
@@ -55,18 +68,18 @@ export const categoryBudgets: CategoryBudget[] = [
 export const referenceIncome = 9500;
 
 export const transactions: Transaction[] = [
-  { date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani", category: "Dani", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui", category: "Gui", cycle: "Abr/2026" },
-  { date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani", category: "Lazer", cycle: "Abr/2026" },
-  { date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui", category: "Lazer", cycle: "Mar/2026" },
-  { date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani", category: "Supermercado", cycle: "Mar/2026" },
-  { date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
+  { id: "tx_1", date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx_2", date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
+  { id: "tx_3", date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx_4", date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani", category: "Dani", cycle: "Abr/2026" },
+  { id: "tx_5", date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx_6", date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx_7", date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui", category: "Gui", cycle: "Abr/2026" },
+  { id: "tx_8", date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani", category: "Lazer", cycle: "Abr/2026" },
+  { id: "tx_9", date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx_10", date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui", category: "Lazer", cycle: "Mar/2026" },
+  { id: "tx_11", date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani", category: "Supermercado", cycle: "Mar/2026" },
+  { id: "tx_12", date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
 ];
 
 export function getDaysUntilClosing(card: Card): number {
@@ -85,6 +98,18 @@ export function getCurrentCycle(): string {
   return `${months[now.getMonth()]}/${now.getFullYear()}`;
 }
 
+export function formatCycleLabel(cycle: string): string {
+  const [monthLabel, yearLabel] = cycle.split("/");
+  const month = MONTH_TO_INDEX[monthLabel] ?? 0;
+  const date = new Date(Number.parseInt(yearLabel ?? "0", 10), month, 1);
+  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^./, (char) => char.toUpperCase());
+}
+
+const MONTH_TO_INDEX: Record<string, number> = {
+  Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
+  Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
+};
+
 export function getCardTotal(cardName: string, cycle: string): number {
   return transactions
     .filter((t) => t.card === cardName && t.cycle === cycle)
@@ -98,10 +123,8 @@ export function getCategoryTotal(categoryName: string, cycle: string): number {
 }
 
 export function getAvailableCash(): number {
-  const cycle = getCurrentCycle();
-  const totalInvoices = cards.reduce((sum, c) => sum + getCardTotal(c.name, cycle), 0);
-  const totalFixed = fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
-  return referenceIncome - totalInvoices - totalFixed;
+  const totalCategoryLimits = categoryBudgets.reduce((sum, category) => sum + category.limit, 0);
+  return referenceIncome - totalCategoryLimits;
 }
 
 export function formatCurrency(value: number): string {

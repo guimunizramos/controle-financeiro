@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency } from "@/lib/finance-data";
-import { ArrowDownLeft, Plus, Trash2 } from "lucide-react";
+import type { InstallmentPurchase, Transaction } from "@/lib/finance-data";
+import { ArrowDownLeft, CalendarClock, CreditCard, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,23 @@ export function addMonthsToCycle(baseCycle: string, monthsToAdd: number): string
   return `${MONTHS[date.getMonth()]}/${date.getFullYear()}`;
 }
 
+function addMonthsToDate(baseDate: string, monthsToAdd: number): string {
+  const date = new Date(baseDate);
+  date.setMonth(date.getMonth() + monthsToAdd);
+  return date.toISOString().slice(0, 10);
+}
+
+function calculatePaidInstallments(firstInstallmentDate: string, totalInstallments: number): number {
+  const today = new Date();
+  const firstDate = new Date(firstInstallmentDate);
+
+  const monthsDiff =
+    (today.getFullYear() - firstDate.getFullYear()) * 12 +
+    (today.getMonth() - firstDate.getMonth());
+
+  return Math.max(0, Math.min(totalInstallments, monthsDiff + 1));
+}
+
 export function splitAmountIntoInstallments(totalAmount: number, installments: number): number[] {
   const safeInstallments = Math.max(1, Math.trunc(installments));
   const totalInCents = Math.round(totalAmount * 100);
@@ -47,7 +65,15 @@ export function splitAmountIntoInstallments(totalAmount: number, installments: n
 }
 
 export function Lancamentos() {
-  const { transactions, cards, addTransaction, removeTransaction, selectedCycle } = useFinance();
+  const {
+    transactions,
+    cards,
+    addTransaction,
+    addInstallmentPurchase,
+    removeTransaction,
+    selectedCycle,
+    installmentPurchases,
+  } = useFinance();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -74,21 +100,47 @@ export function Lancamentos() {
 
     const installmentAmounts = splitAmountIntoInstallments(parsedAmount, installments);
 
-    installmentAmounts.forEach((installmentAmount, index) => {
-      const installmentNumber = index + 1;
-
+    if (installments === 1) {
       addTransaction({
+        id: crypto.randomUUID(),
         date: form.date,
-        description:
-          installments > 1
-            ? `${form.description.trim()} (${installmentNumber}/${installments})`
-            : form.description.trim(),
-        amount: installmentAmount,
+        description: form.description.trim(),
+        amount: parsedAmount,
         card: form.card,
         category: "Caixa",
-        cycle: addMonthsToCycle(selectedCycle, index),
+        cycle: selectedCycle,
       });
-    });
+    } else {
+      const purchaseId = crypto.randomUUID();
+      const purchase: InstallmentPurchase = {
+        id: purchaseId,
+        description: form.description.trim(),
+        total_value: parsedAmount,
+        total_installments: installments,
+        paid_installments: calculatePaidInstallments(form.date, installments),
+        installment_value: installmentAmounts[0],
+        card_origin_id: form.card,
+        category_id: "Caixa",
+        first_installment_date: form.date,
+      };
+
+      const generatedTransactions: Transaction[] = installmentAmounts.map((installmentAmount, index) => {
+        const installmentNumber = index + 1;
+
+        return {
+          id: crypto.randomUUID(),
+          date: addMonthsToDate(form.date, index),
+          description: `${form.description.trim()} (${installmentNumber}/${installments})`,
+          amount: installmentAmount,
+          card: form.card,
+          category: "Caixa",
+          cycle: addMonthsToCycle(selectedCycle, index),
+          installmentPurchaseId: purchaseId,
+        };
+      });
+
+      addInstallmentPurchase(purchase, generatedTransactions);
+    }
 
     setForm({
       date: new Date().toISOString().slice(0, 10),
@@ -119,11 +171,11 @@ export function Lancamentos() {
             <div className="space-y-4 pt-2">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Data</Label>
+                  <Label className="text-xs">Data da 1ª parcela</Label>
                   <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-secondary border-border" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Valor (R$)</Label>
+                  <Label className="text-xs">Valor Total (R$)</Label>
                   <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="bg-secondary border-border" />
                 </div>
               </div>
@@ -157,17 +209,34 @@ export function Lancamentos() {
                   </SelectContent>
                 </Select>
               </div>
-              {form.card && form.date && (
-                <p className="text-xs text-muted-foreground">
-                  Ciclo base: <span className="text-primary font-medium">{selectedCycle}</span>
-                </p>
-              )}
               <Button onClick={handleSubmit} className="w-full gradient-primary text-primary-foreground">
                 Registrar Gasto
               </Button>
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {installmentPurchases.map((purchase) => {
+          const nextInstallmentDate =
+            purchase.paid_installments >= purchase.total_installments
+              ? "Quitado"
+              : new Date(addMonthsToDate(purchase.first_installment_date, purchase.paid_installments)).toLocaleDateString("pt-BR");
+
+          return (
+            <div key={purchase.id} className="rounded-xl border border-[#00C853]/50 bg-[#0b1110] p-4 shadow-[0_0_24px_rgba(0,200,83,0.12)]">
+              <p className="text-sm font-semibold text-[#00C853]">{purchase.description}</p>
+              <div className="mt-3 space-y-1 text-xs text-zinc-300">
+                <p>Valor Total: <span className="font-medium text-zinc-100">{formatCurrency(purchase.total_value)}</span></p>
+                <p>Parcela: <span className="font-medium text-zinc-100">{formatCurrency(purchase.installment_value)}</span></p>
+                <p>Progresso: <span className="font-medium text-zinc-100">{purchase.paid_installments}/{purchase.total_installments}</span></p>
+                <p className="flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5 text-[#00C853]" /> Próxima Parcela: <span className="font-medium text-zinc-100">{nextInstallmentDate}</span></p>
+                <p className="flex items-center gap-1"><CreditCard className="h-3.5 w-3.5 text-[#00C853]" /> Cartão: <span className="font-medium text-zinc-100">{purchase.card_origin_id}</span></p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="rounded-xl border bg-card overflow-hidden">
@@ -182,7 +251,7 @@ export function Lancamentos() {
           {cycleTx.map((tx, i) => {
             const globalIdx = transactions.indexOf(tx);
             return (
-              <div key={i} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_80px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
+              <div key={tx.id ?? i} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_80px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
                 <div className="flex items-center gap-3">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary md:hidden">
                     <ArrowDownLeft className="h-3.5 w-3.5 text-destructive" />

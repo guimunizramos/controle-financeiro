@@ -20,7 +20,7 @@ export function CashCard() {
       </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>Receita de referência: {formatCurrency(referenceIncome)}</span>
-        <span className="text-primary font-medium">{pct}% livre</span>
+        <span className="text-primary font-medium">{pct}% reservado em Caixa</span>
       </div>
     </div>
   );

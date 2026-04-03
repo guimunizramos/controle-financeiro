@@ -1,11 +1,11 @@
 import { useFinance } from "@/contexts/FinanceContext";
-import { getDaysUntilClosing } from "@/lib/finance-data";
-import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
+import { formatCycleLabel, getDaysUntilClosing } from "@/lib/finance-data";
+import { Activity, ChevronLeft, ChevronRight, LayoutDashboard, List, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
+import { Button } from "@/components/ui/button";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -18,6 +18,18 @@ const Index = () => {
   const { cards, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
   const guiCard = cards.find((c) => c.name === "Gui");
   const daysLeft = guiCard ? getDaysUntilClosing(guiCard) : null;
+
+  const selectedCycleIndex = availableCycles.indexOf(selectedCycle);
+  const goToPreviousCycle = () => {
+    if (selectedCycleIndex < availableCycles.length - 1) {
+      setSelectedCycle(availableCycles[selectedCycleIndex + 1]);
+    }
+  };
+  const goToNextCycle = () => {
+    if (selectedCycleIndex > 0) {
+      setSelectedCycle(availableCycles[selectedCycleIndex - 1]);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,19 +47,14 @@ const Index = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="min-w-40">
-              <Select value={selectedCycle} onValueChange={setSelectedCycle}>
-                <SelectTrigger className="h-8 text-xs bg-secondary/50 border-border">
-                  <SelectValue placeholder="Selecionar ciclo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCycles.map((cycle) => (
-                    <SelectItem key={cycle} value={cycle}>
-                      {cycle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousCycle} disabled={selectedCycleIndex >= availableCycles.length - 1}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <p className="min-w-40 text-center text-sm font-medium">{formatCycleLabel(selectedCycle)}</p>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextCycle} disabled={selectedCycleIndex <= 0}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
             <div className="text-mono text-xs text-muted-foreground">
               {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
