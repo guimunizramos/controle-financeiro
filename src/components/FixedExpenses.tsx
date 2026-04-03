@@ -9,7 +9,7 @@ export function FixedExpenses() {
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Contas Fixas</h3>
+        <h3 className="font-bold text-sm text-white uppercase tracking-wider">Contas Fixas</h3>
         <span className="text-mono text-sm font-semibold text-primary">{formatCurrency(total)}</span>
       </div>
       <div className="space-y-1">

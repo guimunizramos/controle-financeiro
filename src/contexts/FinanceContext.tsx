@@ -11,6 +11,7 @@ import {
   addMonthsToCycle,
   getCycleFromDate,
   splitAmountIntoInstallments,
+  getCardOwnerFromLabel,
 } from "@/lib/finance-data";
 
 interface FinanceState {
@@ -79,11 +80,29 @@ function loadState(): FinanceState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<FinanceState>;
+      const migratedCards = (parsed.cards ?? defaultCards).map((card) => {
+        const legacyCard = card as { name?: string; owner?: string; bank?: string; limit: number; closingDay: number; dueDay: number };
+        return {
+          owner: legacyCard.owner ?? legacyCard.name ?? "Sem nome",
+          bank: legacyCard.bank ?? "Principal",
+          limit: legacyCard.limit,
+          closingDay: legacyCard.closingDay,
+          dueDay: legacyCard.dueDay,
+        };
+      });
+      const migratedTransactions = (parsed.transactions ?? defaultTransactions).map((tx) => {
+        const hasCardSeparator = tx.card.includes("•");
+        return {
+          ...tx,
+          card: hasCardSeparator ? tx.card : `${tx.card} • Principal`,
+        };
+      });
+
       return {
-        cards: parsed.cards ?? defaultCards,
+        cards: migratedCards,
         fixedExpenses: parsed.fixedExpenses ?? defaultFixed,
         categoryBudgets: (parsed.categoryBudgets ?? defaultBudgets).filter((c) => c.name !== "Caixa"),
-        transactions: parsed.transactions ?? defaultTransactions,
+        transactions: migratedTransactions,
         installmentPurchases: parsed.installmentPurchases ?? defaultInstallmentPurchases,
         referenceIncome: parsed.referenceIncome ?? defaultIncome,
         selectedCycle: parsed.selectedCycle ?? getCurrentCycle(),
@@ -217,8 +236,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getCardTotal = useCallback(
-    (cardName: string, cycle: string) =>
-      state.transactions.filter((t) => t.card === cardName && t.cycle === cycle).reduce((s, t) => s + t.amount, 0),
+    (cardOwner: string, cycle: string) =>
+      state.transactions
+        .filter((t) => getCardOwnerFromLabel(t.card) === cardOwner && t.cycle === cycle)
+        .reduce((s, t) => s + t.amount, 0),
     [state.transactions]
   );
 
@@ -230,7 +251,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const getAvailableCash = useCallback(() => {
     const cycle = state.selectedCycle;
-    const totalInvoices = state.cards.reduce((sum, c) => sum + state.transactions.filter((t) => t.card === c.name && t.cycle === cycle).reduce((acc, t) => acc + t.amount, 0), 0);
+    const uniqueOwners = [...new Set(state.cards.map((card) => card.owner))];
+    const totalInvoices = uniqueOwners.reduce(
+      (sum, owner) =>
+        sum + state.transactions.filter((t) => getCardOwnerFromLabel(t.card) === owner && t.cycle === cycle).reduce((acc, t) => acc + t.amount, 0),
+      0
+    );
     const totalFixed = state.fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
     return state.referenceIncome - totalInvoices - totalFixed;
   }, [state]);

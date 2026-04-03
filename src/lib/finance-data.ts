@@ -1,5 +1,6 @@
 export interface Card {
-  name: string;
+  owner: string;
+  bank: string;
   limit: number;
   closingDay: number;
   dueDay: number;
@@ -75,8 +76,8 @@ export function splitAmountIntoInstallments(totalAmount: number, installments: n
 }
 
 export const cards: Card[] = [
-  { name: "Gui", limit: 5000, closingDay: 8, dueDay: 15 },
-  { name: "Dani", limit: 3500, closingDay: 5, dueDay: 12 },
+  { owner: "Gui", bank: "Principal", limit: 5000, closingDay: 8, dueDay: 15 },
+  { owner: "Dani", bank: "Principal", limit: 3500, closingDay: 5, dueDay: 12 },
 ];
 
 export const fixedExpenses: FixedExpense[] = [
@@ -102,18 +103,18 @@ export const categoryBudgets: CategoryBudget[] = [
 export const referenceIncome = 9500;
 
 export const transactions: Transaction[] = [
-  { id: "tx-1", date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { id: "tx-2", date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
-  { id: "tx-3", date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { id: "tx-4", date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani", category: "Dani", cycle: "Abr/2026" },
-  { id: "tx-5", date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { id: "tx-6", date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { id: "tx-7", date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui", category: "Gui", cycle: "Abr/2026" },
-  { id: "tx-8", date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani", category: "Lazer", cycle: "Abr/2026" },
-  { id: "tx-9", date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { id: "tx-10", date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui", category: "Lazer", cycle: "Mar/2026" },
-  { id: "tx-11", date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani", category: "Supermercado", cycle: "Mar/2026" },
-  { id: "tx-12", date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
+  { id: "tx-1", date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui • Principal", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-2", date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani • Principal", category: "Supermercado", cycle: "Abr/2026" },
+  { id: "tx-3", date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui • Principal", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx-4", date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani • Principal", category: "Dani", cycle: "Abr/2026" },
+  { id: "tx-5", date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui • Principal", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-6", date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui • Principal", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx-7", date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui • Principal", category: "Gui", cycle: "Abr/2026" },
+  { id: "tx-8", date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani • Principal", category: "Lazer", cycle: "Abr/2026" },
+  { id: "tx-9", date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui • Principal", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-10", date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui • Principal", category: "Lazer", cycle: "Mar/2026" },
+  { id: "tx-11", date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani • Principal", category: "Supermercado", cycle: "Mar/2026" },
+  { id: "tx-12", date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui • Principal", category: "Carro", cycle: "Mar/2026" },
 ];
 
 export const installmentPurchases: InstallmentPurchase[] = [];
@@ -126,6 +127,14 @@ export function getDaysUntilClosing(card: Card): number {
   }
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   return lastDay - day + card.closingDay;
+}
+
+export function getCardLabel(card: Card): string {
+  return `${card.owner} • ${card.bank}`;
+}
+
+export function getCardOwnerFromLabel(label: string): string {
+  return label.split("•")[0]?.trim() ?? label;
 }
 
 export function getCurrentCycle(): string {

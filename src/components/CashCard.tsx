@@ -14,7 +14,7 @@ export function CashCard() {
           <Wallet className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Caixa Disponível</p>
+          <p className="text-sm font-bold text-white">Caixa Disponível</p>
           <p className="text-mono text-2xl font-bold text-primary">{formatCurrency(cash)}</p>
         </div>
       </div>

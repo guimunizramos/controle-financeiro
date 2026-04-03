@@ -17,7 +17,7 @@ const barStyles = {
 
 export function InvoiceCard({ card }: { card: Card }) {
   const { getCardTotal, selectedCycle: cycle } = useFinance();
-  const total = getCardTotal(card.name, cycle);
+  const total = getCardTotal(card.owner, cycle);
   const pct = (total / card.limit) * 100;
   const status = getStatusTag(pct);
   const daysLeft = getDaysUntilClosing(card);
@@ -26,8 +26,8 @@ export function InvoiceCard({ card }: { card: Card }) {
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <CreditCard className="h-5 w-5 text-muted-foreground" />
-          <span className="font-semibold">Cartão {card.name}</span>
+          <CreditCard className="h-5 w-5 text-white" />
+          <span className="font-bold text-white">Cartões {card.owner}</span>
         </div>
         <span className={`text-xs font-bold px-2 py-1 rounded-md bg-secondary ${statusStyles[status.color]}`}>
           {status.label}
