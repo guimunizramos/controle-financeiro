@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonthsToCycle, splitAmountIntoInstallments } from "@/components/tabs/Lancamentos";
+import { addMonthsToCycle, splitAmountIntoInstallments } from "@/lib/finance-data";
 
 describe("Lancamentos helpers", () => {
   it("adds months to cycle across year boundaries", () => {

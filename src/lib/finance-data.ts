@@ -15,15 +15,63 @@ export interface FixedExpense {
 export interface CategoryBudget {
   name: string;
   limit: number;
+  isFixed?: boolean;
 }
 
 export interface Transaction {
+  id: string;
   date: string;
   description: string;
   amount: number;
   card: string;
   category: string;
   cycle: string;
+  installmentPurchaseId?: string;
+}
+
+export interface InstallmentPurchase {
+  id: string;
+  description: string;
+  totalValue: number;
+  totalInstallments: number;
+  paidInstallments: number;
+  installmentValue: number;
+  cardOriginId: string;
+  category: string;
+  firstInstallmentDate: string;
+  firstCycle: string;
+  lastInstallmentCycle: string;
+}
+
+export const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+export const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
+  Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
+};
+
+export function getCycleFromDate(dateInput: string | Date): string {
+  const date = typeof dateInput === "string" ? new Date(`${dateInput}T00:00:00`) : dateInput;
+  return `${MONTHS[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+export function addMonthsToCycle(baseCycle: string, monthsToAdd: number): string {
+  const [monthLabel, yearLabel] = baseCycle.split("/");
+  const month = MONTH_INDEX[monthLabel] ?? 0;
+  const year = Number.parseInt(yearLabel ?? "0", 10);
+  const date = new Date(year, month + monthsToAdd, 1);
+  return `${MONTHS[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+export function splitAmountIntoInstallments(totalAmount: number, installments: number): number[] {
+  const safeInstallments = Math.max(1, Math.trunc(installments));
+  const totalInCents = Math.round(totalAmount * 100);
+  const baseInstallmentInCents = Math.floor(totalInCents / safeInstallments);
+  const remainder = totalInCents - (baseInstallmentInCents * safeInstallments);
+
+  return Array.from({ length: safeInstallments }, (_, index) => {
+    const installmentInCents = baseInstallmentInCents + (index < remainder ? 1 : 0);
+    return installmentInCents / 100;
+  });
 }
 
 export const cards: Card[] = [
@@ -41,7 +89,6 @@ export const fixedExpenses: FixedExpense[] = [
 ];
 
 export const categoryBudgets: CategoryBudget[] = [
-  { name: "Caixa", limit: 1500 },
   { name: "Alimentação", limit: 800 },
   { name: "Supermercado", limit: 1200 },
   { name: "Carro", limit: 500 },
@@ -55,19 +102,21 @@ export const categoryBudgets: CategoryBudget[] = [
 export const referenceIncome = 9500;
 
 export const transactions: Transaction[] = [
-  { date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani", category: "Dani", cycle: "Abr/2026" },
-  { date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
-  { date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui", category: "Gui", cycle: "Abr/2026" },
-  { date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani", category: "Lazer", cycle: "Abr/2026" },
-  { date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
-  { date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui", category: "Lazer", cycle: "Mar/2026" },
-  { date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani", category: "Supermercado", cycle: "Mar/2026" },
-  { date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
+  { id: "tx-1", date: "2026-04-01", description: "iFood", amount: 45.9, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-2", date: "2026-04-01", description: "Supermercado Extra", amount: 287.3, card: "Dani", category: "Supermercado", cycle: "Abr/2026" },
+  { id: "tx-3", date: "2026-04-02", description: "Uber", amount: 32.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx-4", date: "2026-04-02", description: "Farmácia", amount: 89.5, card: "Dani", category: "Dani", cycle: "Abr/2026" },
+  { id: "tx-5", date: "2026-04-02", description: "Restaurante Outback", amount: 156.0, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-6", date: "2026-04-03", description: "Gasolina", amount: 210.0, card: "Gui", category: "Carro", cycle: "Abr/2026" },
+  { id: "tx-7", date: "2026-04-03", description: "Mercado Livre", amount: 129.9, card: "Gui", category: "Gui", cycle: "Abr/2026" },
+  { id: "tx-8", date: "2026-03-28", description: "Cinema", amount: 65.0, card: "Dani", category: "Lazer", cycle: "Abr/2026" },
+  { id: "tx-9", date: "2026-03-30", description: "Padaria", amount: 22.5, card: "Gui", category: "Alimentação", cycle: "Abr/2026" },
+  { id: "tx-10", date: "2026-03-25", description: "Amazon Prime", amount: 14.9, card: "Gui", category: "Lazer", cycle: "Mar/2026" },
+  { id: "tx-11", date: "2026-03-20", description: "Supermercado Pão de Açúcar", amount: 345.8, card: "Dani", category: "Supermercado", cycle: "Mar/2026" },
+  { id: "tx-12", date: "2026-03-18", description: "Posto Shell", amount: 180.0, card: "Gui", category: "Carro", cycle: "Mar/2026" },
 ];
+
+export const installmentPurchases: InstallmentPurchase[] = [];
 
 export function getDaysUntilClosing(card: Card): number {
   const today = new Date();
@@ -80,28 +129,8 @@ export function getDaysUntilClosing(card: Card): number {
 }
 
 export function getCurrentCycle(): string {
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const now = new Date();
-  return `${months[now.getMonth()]}/${now.getFullYear()}`;
-}
-
-export function getCardTotal(cardName: string, cycle: string): number {
-  return transactions
-    .filter((t) => t.card === cardName && t.cycle === cycle)
-    .reduce((sum, t) => sum + t.amount, 0);
-}
-
-export function getCategoryTotal(categoryName: string, cycle: string): number {
-  return transactions
-    .filter((t) => t.category === categoryName && t.cycle === cycle)
-    .reduce((sum, t) => sum + t.amount, 0);
-}
-
-export function getAvailableCash(): number {
-  const cycle = getCurrentCycle();
-  const totalInvoices = cards.reduce((sum, c) => sum + getCardTotal(c.name, cycle), 0);
-  const totalFixed = fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
-  return referenceIncome - totalInvoices - totalFixed;
+  return `${MONTHS[now.getMonth()]}/${now.getFullYear()}`;
 }
 
 export function formatCurrency(value: number): string {

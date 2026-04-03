@@ -1,11 +1,11 @@
 import { useFinance } from "@/contexts/FinanceContext";
 import { getDaysUntilClosing } from "@/lib/finance-data";
-import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
+import { Activity, LayoutDashboard, List, Settings, WalletCards } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
+import { ComprasParceladas } from "@/components/tabs/ComprasParceladas";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -15,7 +15,7 @@ function getGreeting(): string {
 }
 
 const Index = () => {
-  const { cards, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
+  const { cards } = useFinance();
   const guiCard = cards.find((c) => c.name === "Gui");
   const daysLeft = guiCard ? getDaysUntilClosing(guiCard) : null;
 
@@ -34,24 +34,8 @@ const Index = () => {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="min-w-40">
-              <Select value={selectedCycle} onValueChange={setSelectedCycle}>
-                <SelectTrigger className="h-8 text-xs bg-secondary/50 border-border">
-                  <SelectValue placeholder="Selecionar ciclo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCycles.map((cycle) => (
-                    <SelectItem key={cycle} value={cycle}>
-                      {cycle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="text-mono text-xs text-muted-foreground">
-              {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
-            </div>
+          <div className="text-mono text-xs text-muted-foreground">
+            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
           </div>
         </div>
       </header>
@@ -67,6 +51,10 @@ const Index = () => {
               <List className="h-4 w-4" />
               Lançamentos
             </TabsTrigger>
+            <TabsTrigger value="compras-parceladas" className="gap-1.5 data-[state=active]:text-primary">
+              <WalletCards className="h-4 w-4" />
+              Compras Parceladas
+            </TabsTrigger>
             <TabsTrigger value="configuracoes" className="gap-1.5 data-[state=active]:text-primary">
               <Settings className="h-4 w-4" />
               Configurações
@@ -78,6 +66,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="lancamentos">
             <Lancamentos />
+          </TabsContent>
+          <TabsContent value="compras-parceladas">
+            <ComprasParceladas />
           </TabsContent>
           <TabsContent value="configuracoes">
             <Configuracoes />
