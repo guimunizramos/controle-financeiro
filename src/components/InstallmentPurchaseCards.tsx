@@ -1,6 +1,6 @@
 import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency } from "@/lib/finance-data";
-import { CheckCircle2, Clock3, CreditCard } from "lucide-react";
+import { CheckCircle2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function formatProgress(paid: number, total: number): string {
@@ -21,13 +21,14 @@ export function InstallmentPurchaseCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {installmentPurchases.map((purchase) => {
         const purchaseInstallments = transactions
           .filter((tx) => tx.installmentPurchaseId === purchase.id)
           .sort((a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0));
 
-        const nextPendingInstallment = purchaseInstallments.find((tx) => !tx.isPaid);
+        const lastInstallment = purchaseInstallments[purchaseInstallments.length - 1];
+        const remainingInstallments = Math.max(0, purchase.totalInstallments - purchase.paidInstallments);
         const isFinished = purchase.paidInstallments >= purchase.totalInstallments;
 
         return (
@@ -56,19 +57,19 @@ export function InstallmentPurchaseCards() {
               </div>
             </div>
 
-            <div className="rounded-lg bg-secondary/20 p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Próxima Parcela</p>
-              {nextPendingInstallment ? (
-                <p className="text-sm flex items-center gap-1.5">
-                  <Clock3 className="h-3.5 w-3.5 text-primary" />
-                  {new Date(nextPendingInstallment.date).toLocaleDateString("pt-BR")} · {formatCurrency(nextPendingInstallment.amount)}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg bg-secondary/20 p-3">
+                <p className="text-xs text-muted-foreground">Parcelas Restantes</p>
+                <p className="font-semibold">{remainingInstallments}</p>
+              </div>
+              <div className="rounded-lg bg-secondary/20 p-3">
+                <p className="text-xs text-muted-foreground">Mês da Última Parcela</p>
+                <p className="font-semibold">
+                  {lastInstallment
+                    ? new Date(lastInstallment.date).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+                    : "-"}
                 </p>
-              ) : (
-                <p className="text-sm flex items-center gap-1.5 text-primary">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Compra quitada
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">Ciclo: {purchase.nextInstallmentCycle}</p>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
@@ -79,7 +80,7 @@ export function InstallmentPurchaseCards() {
                 onClick={() => markInstallmentAsPaid(purchase.id)}
                 className="gradient-primary text-primary-foreground disabled:opacity-40"
               >
-                Marcar parcela paga
+                {isFinished ? <><CheckCircle2 className="h-3.5 w-3.5" /> Quitado</> : "Marcar parcela paga"}
               </Button>
             </div>
           </div>
