@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, getCurrentCycle, getDaysUntilClosing } from "@/lib/finance-data";
-import type { Transaction } from "@/lib/finance-data";
-import { ArrowDownLeft, Plus, Trash2, X } from "lucide-react";
+import { formatCurrency, getCurrentCycle } from "@/lib/finance-data";
+import { ArrowDownLeft, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +39,19 @@ export function Lancamentos() {
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), description: "", amount: "", card: "", category: "" });
 
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const cycles = [...new Set(sorted.map((t) => t.cycle))];
+  const monthMap: Record<string, number> = { Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5, Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11 };
+  const parseCycle = (cycle: string) => {
+    const [month, year] = cycle.split("/");
+    return new Date(Number(year), monthMap[month] ?? 0, 1).getTime();
+  };
+  const cycles = [...new Set(sorted.map((t) => t.cycle))]
+    .sort((a, b) => parseCycle(b) - parseCycle(a));
+  const currentCycle = getCurrentCycle();
+  const availableCycles = cycles.includes(currentCycle) ? cycles : [currentCycle, ...cycles].sort((a, b) => parseCycle(b) - parseCycle(a));
+  const [selectedCycle, setSelectedCycle] = useState<string>(availableCycles[0] ?? currentCycle);
+  const selectedCycleIndex = availableCycles.indexOf(selectedCycle);
+  const selectedCycleTransactions = sorted.filter((transaction) => transaction.cycle === selectedCycle);
+  const selectedCycleTotal = selectedCycleTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
 
   const handleSubmit = () => {
     if (!form.description || !form.amount || !form.card || !form.category) return;
@@ -119,49 +130,66 @@ export function Lancamentos() {
         </Dialog>
       </div>
 
-      {cycles.map((cycle) => {
-        const cycleTx = sorted.filter((t) => t.cycle === cycle);
-        const cycleTotal = cycleTx.reduce((s, t) => s + t.amount, 0);
-
-        return (
-          <div key={cycle} className="rounded-xl border bg-card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Ciclo {cycle}</h3>
-              <span className="text-mono text-sm font-semibold text-destructive">-{formatCurrency(cycleTotal)}</span>
-            </div>
-            <div className="hidden md:grid grid-cols-[1fr_100px_80px_110px_100px_40px] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b">
-              <span>Descrição</span><span>Valor</span><span>Cartão</span><span>Categoria</span><span>Data</span><span></span>
-            </div>
-            <div className="divide-y divide-border/50">
-              {cycleTx.map((tx, i) => {
-                const globalIdx = transactions.indexOf(tx);
-                return (
-                  <div key={i} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_80px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary md:hidden">
-                        <ArrowDownLeft className="h-3.5 w-3.5 text-destructive" />
-                      </div>
-                      <span className="text-sm font-medium">{tx.description}</span>
-                    </div>
-                    <span className="text-mono text-sm text-destructive">-{formatCurrency(tx.amount)}</span>
-                    <span className="text-xs text-muted-foreground">{tx.card}</span>
-                    <span className="text-xs">
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{tx.category}</span>
-                    </span>
-                    <span className="text-mono text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")}</span>
-                    <button
-                      onClick={() => removeTransaction(globalIdx)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 bg-secondary/50 border-b">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => selectedCycleIndex >= 0 && setSelectedCycle(availableCycles[selectedCycleIndex + 1])}
+            disabled={selectedCycleIndex < 0 || selectedCycleIndex === availableCycles.length - 1}
+            className="h-8 w-8"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center">
+            <h3 className="text-2xl md:text-3xl font-bold tracking-tight">{selectedCycle}</h3>
+            <span className="text-sm text-destructive">-{formatCurrency(selectedCycleTotal)}</span>
           </div>
-        );
-      })}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => selectedCycleIndex > 0 && setSelectedCycle(availableCycles[selectedCycleIndex - 1])}
+            disabled={selectedCycleIndex <= 0}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="hidden md:grid grid-cols-[1fr_100px_80px_110px_100px_40px] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b">
+          <span>Descrição</span><span>Valor</span><span>Cartão</span><span>Categoria</span><span>Data</span><span></span>
+        </div>
+        <div className="divide-y divide-border/50">
+          {selectedCycleTransactions.map((tx, i) => {
+            const globalIdx = transactions.indexOf(tx);
+            return (
+              <div key={i} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_80px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary md:hidden">
+                    <ArrowDownLeft className="h-3.5 w-3.5 text-destructive" />
+                  </div>
+                  <span className="text-sm font-medium">{tx.description}</span>
+                </div>
+                <span className="text-mono text-sm text-destructive">-{formatCurrency(tx.amount)}</span>
+                <span className="text-xs text-muted-foreground">{tx.card}</span>
+                <span className="text-xs">
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{tx.category}</span>
+                </span>
+                <span className="text-mono text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")}</span>
+                <button
+                  onClick={() => removeTransaction(globalIdx)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+          {selectedCycleTransactions.length === 0 && (
+            <p className="px-5 py-6 text-sm text-muted-foreground">Nenhum lançamento neste ciclo.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

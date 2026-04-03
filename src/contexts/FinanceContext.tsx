@@ -39,16 +39,30 @@ interface FinanceContextType extends FinanceState {
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
 const STORAGE_KEY = "cycle-finance-data";
+const FIXED_CATEGORY_NAME = "caixa";
+
+function syncCaixaCategory(referenceIncome: number, categoryBudgets: CategoryBudget[]): CategoryBudget[] {
+  const userCategories = categoryBudgets.filter((category) => category.name !== FIXED_CATEGORY_NAME);
+  const totalUserLimits = userCategories.reduce((sum, category) => sum + category.limit, 0);
+  const caixaLimit = referenceIncome - totalUserLimits;
+  return [...userCategories, { name: FIXED_CATEGORY_NAME, limit: caixaLimit }];
+}
 
 function loadState(): FinanceState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as FinanceState;
+      return {
+        ...parsed,
+        categoryBudgets: syncCaixaCategory(parsed.referenceIncome, parsed.categoryBudgets),
+      };
+    }
   } catch {}
   return {
     cards: defaultCards,
     fixedExpenses: defaultFixed,
-    categoryBudgets: defaultBudgets,
+    categoryBudgets: syncCaixaCategory(defaultIncome, defaultBudgets),
     transactions: defaultTransactions,
     referenceIncome: defaultIncome,
   };
@@ -82,13 +96,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCategoryBudget = useCallback((b: CategoryBudget) => {
-    setState((s) => ({ ...s, categoryBudgets: [...s.categoryBudgets, b] }));
+    if (b.name === FIXED_CATEGORY_NAME) return;
+    setState((s) => ({ ...s, categoryBudgets: syncCaixaCategory(s.referenceIncome, [...s.categoryBudgets, b]) }));
   }, []);
   const updateCategoryBudget = useCallback((i: number, b: CategoryBudget) => {
-    setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.map((x, idx) => (idx === i ? b : x)) }));
+    if (b.name === FIXED_CATEGORY_NAME) return;
+    setState((s) => {
+      if (s.categoryBudgets[i]?.name === FIXED_CATEGORY_NAME) return s;
+      return {
+        ...s,
+        categoryBudgets: syncCaixaCategory(
+          s.referenceIncome,
+          s.categoryBudgets.map((x, idx) => (idx === i ? b : x))
+        ),
+      };
+    });
   }, []);
   const removeCategoryBudget = useCallback((i: number) => {
-    setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
+    setState((s) => {
+      if (s.categoryBudgets[i]?.name === FIXED_CATEGORY_NAME) return s;
+      return {
+        ...s,
+        categoryBudgets: syncCaixaCategory(
+          s.referenceIncome,
+          s.categoryBudgets.filter((_, idx) => idx !== i)
+        ),
+      };
+    });
   }, []);
 
   const addTransaction = useCallback((tx: Transaction) => {
@@ -102,7 +136,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setReferenceIncome = useCallback((value: number) => {
-    setState((s) => ({ ...s, referenceIncome: value }));
+    setState((s) => ({
+      ...s,
+      referenceIncome: value,
+      categoryBudgets: syncCaixaCategory(value, s.categoryBudgets),
+    }));
   }, []);
 
   const getCardTotal = useCallback(

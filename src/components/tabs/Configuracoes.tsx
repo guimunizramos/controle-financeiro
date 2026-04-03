@@ -64,6 +64,7 @@ export function Configuracoes() {
   };
   const submitCat = () => {
     if (!catForm.name || !catForm.limit) return;
+    if (catForm.name.trim().toLowerCase() === "caixa") return;
     addCategoryBudget({ name: catForm.name.trim(), limit: parseFloat(catForm.limit) });
     setCatForm({ name: "", limit: "" });
     setCatOpen(false);
@@ -204,10 +205,21 @@ export function Configuracoes() {
           <div className="space-y-1">
             {categoryBudgets.map((cat, i) => (
               <div key={i} className="group flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
-                <span className="text-sm">{cat.name}</span>
                 <div className="flex items-center gap-2">
-                  <EditableValue value={cat.limit} onSave={(v) => updateCategoryBudget(i, { ...cat, limit: v })} />
-                  <button onClick={() => removeCategoryBudget(i)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <span className="text-sm">{cat.name}</span>
+                  {cat.name === "caixa" && (
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">fixa</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {cat.name === "caixa" ? (
+                    <span className="text-sm text-primary">{formatCurrency(cat.limit)}</span>
+                  ) : (
+                    <>
+                      <EditableValue value={cat.limit} onSave={(v) => updateCategoryBudget(i, { ...cat, limit: v })} />
+                      <button onClick={() => removeCategoryBudget(i)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -50,7 +50,7 @@
 
     --font-heading: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-mono: 'Inter', sans-serif;
 
     --glow-primary: 0 0 20px hsl(145 100% 39% / 0.15);
     --glow-primary-strong: 0 0 30px hsl(145 100% 39% / 0.25);
