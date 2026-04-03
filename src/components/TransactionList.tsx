@@ -1,10 +1,9 @@
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, getCurrentCycle } from "@/lib/finance-data";
+import { formatCurrency } from "@/lib/finance-data";
 import { ArrowDownLeft } from "lucide-react";
 
 export function TransactionList() {
-  const { transactions } = useFinance();
-  const cycle = getCurrentCycle();
+  const { transactions, selectedCycle: cycle } = useFinance();
   const currentTx = transactions
     .filter((t) => t.cycle === cycle)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

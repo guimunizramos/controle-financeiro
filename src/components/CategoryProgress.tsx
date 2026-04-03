@@ -1,12 +1,11 @@
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, getCurrentCycle, getStatusTag } from "@/lib/finance-data";
+import { formatCurrency, getStatusTag } from "@/lib/finance-data";
 
 const barStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destructive" } as const;
 const dotStyles = { ok: "bg-primary", warning: "bg-warning", alert: "bg-destructive" } as const;
 
 export function CategoryProgress() {
-  const { categoryBudgets, getCategoryTotal } = useFinance();
-  const cycle = getCurrentCycle();
+  const { categoryBudgets, getCategoryTotal, selectedCycle: cycle } = useFinance();
 
   const categories = categoryBudgets
     .map((cat) => {

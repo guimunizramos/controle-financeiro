@@ -2,6 +2,7 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { getDaysUntilClosing } from "@/lib/finance-data";
 import { Activity, LayoutDashboard, List, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
@@ -14,7 +15,7 @@ function getGreeting(): string {
 }
 
 const Index = () => {
-  const { cards } = useFinance();
+  const { cards, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
   const guiCard = cards.find((c) => c.name === "Gui");
   const daysLeft = guiCard ? getDaysUntilClosing(guiCard) : null;
 
@@ -36,8 +37,24 @@ const Index = () => {
               </p>
             </div>
           </div>
-          <div className="text-mono text-xs text-muted-foreground">
-            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
+          <div className="flex items-center gap-3">
+            <div className="min-w-40">
+              <Select value={selectedCycle} onValueChange={setSelectedCycle}>
+                <SelectTrigger className="h-8 text-xs bg-secondary/50 border-border">
+                  <SelectValue placeholder="Selecionar ciclo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCycles.map((cycle) => (
+                    <SelectItem key={cycle} value={cycle}>
+                      {cycle}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-mono text-xs text-muted-foreground">
+              {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
+            </div>
           </div>
         </div>
       </header>
