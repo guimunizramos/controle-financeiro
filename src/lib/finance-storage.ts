@@ -191,8 +191,10 @@ export async function fetchFinanceState(): Promise<FinanceState | null> {
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
+  // Mantém uma cópia local sempre e só sincroniza remoto quando Supabase estiver disponível.
   saveLocalState(state);
-  if (!supabase || !hasSupabaseEnv) return;
+  const shouldUseLocalOnly = !supabase || !hasSupabaseEnv;
+  if (shouldUseLocalOnly) return;
 
   const cards = state.cards.map((card) => ({ ...card }));
   const fixedExpenses = state.fixedExpenses.map((expense) => ({ ...expense }));
