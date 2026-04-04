@@ -2,7 +2,7 @@
 
 ## Persistência com Vercel Edge Config
 
-A persistência foi ajustada para usar **Vercel Edge Config** como fonte remota e `localStorage` como fallback local.
+A persistência remota usa **Vercel Edge Config** e mantém `localStorage` como fallback local.
 
 ### 1) Variáveis de ambiente
 
@@ -12,34 +12,41 @@ No projeto Vercel, conecte o **Edge Config Store** ao projeto e rode:
 vercel env pull
 ```
 
-Para escrita pelo app (salvar alterações), configure também:
+Para escrita pelo app (rota `/api/finance-state`), configure também:
 
 ```bash
 EDGE_CONFIG_ID=...
 EDGE_CONFIG_TOKEN=...
 ```
 
-> `EDGE_CONFIG` é usado para leitura remota.
-> `EDGE_CONFIG_ID` + `EDGE_CONFIG_TOKEN` são usados pela rota `/api/finance-state` para `PATCH` de itens.
+> `EDGE_CONFIG` é usado para leitura remota.  
+> `EDGE_CONFIG_ID` + `EDGE_CONFIG_TOKEN` são usados para `PATCH` de itens.
 
-### 2) Item usado no Edge Config
+### 2) Instalar pacote do Edge Config SDK (opcional)
+
+```bash
+npm install @vercel/edge-config
+```
+
+> O projeto atual funciona sem SDK no código de API (usa `fetch` HTTP),
+> mas o pacote pode ser útil para integrações futuras.
+
+### 3) Item usado no Edge Config
 
 O app salva e lê o estado financeiro no item:
 
 - `finance_state`
 
-### 3) Endpoint de teste (`/api/welcome`)
+### 4) Teste recomendado para projeto Vite
 
-Para evitar erro de build em projeto Vite (sem `next/server`), foi adicionado `api/welcome.ts` lendo a chave `greeting` direto do Edge Config.
-
-Acesse:
+Use o endpoint Edge Function:
 
 - `/api/welcome`
 
-para validar o fluxo da documentação da Vercel.
+Ele lê a chave `greeting` direto do Edge Config sem depender de `next/server`.
 
-### 4) Importante para evitar conflito de merge/deploy
+### 5) Middleware `/welcome` (somente Next.js)
 
-- Use **somente** `api/welcome.ts` (Edge Function).
-- **Não** use `middleware.js` com `next/server` neste projeto Vite.
-- Se aparecer conflito entre versões de README, mantenha a versão que referencia `/api/welcome` e remova qualquer bloco sobre `middleware.js`/`/welcome`.
+Se o projeto for **Next.js**, você pode usar middleware com `next/server`.
+
+Se o projeto for **Vite** (este repositório), **não use** `middleware.js` com `next/server`.
