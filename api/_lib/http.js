@@ -25,6 +25,18 @@ export function handleOptions(req, res) {
   return true;
 }
 
+export function getErrorMessage(error, fallbackMessage = "Erro interno no servidor") {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  return fallbackMessage;
+}
+
 export async function readBody(req) {
   if (typeof req.body === "object" && req.body !== null) {
     return req.body;
