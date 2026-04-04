@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:init": "node server/scripts/init-db.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -63,7 +64,8 @@
     "vaul": "^0.9.9",
     "zod": "^3.25.76",
     "@supabase/supabase-js": "^2.57.4",
-    "@vercel/edge-config": "^1.4.0"
+    "@vercel/edge-config": "^1.4.0",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
