@@ -1,19 +1,53 @@
 # Cycle Finance Engine
 
-## Persistência de dados financeiros
+## Persistência de dados no Postgres (Neon)
 
-A camada financeira do app continua 100% local usando `localStorage` (`src/lib/finance-storage.ts`).
+A aplicação agora persiste **posts + dados financeiros** no banco Postgres (Neon), sem uso de `localStorage` como armazenamento principal.
 
-## Persistência de posts com Postgres (Neon)
+## Dados financeiros mapeados para o banco
 
-Os posts agora são persistidos no banco Postgres (Neon), sem uso de `localStorage` para posts.
+Os dados que antes eram salvos no `localStorage` foram separados em coleções de banco:
 
-### Endpoints
+- `cards`
+- `fixedExpenses`
+- `categoryBudgets`
+- `transactions`
+- `installmentPurchases`
+- `settings` (`referenceIncome` e `selectedCycle`)
 
-- `GET /api/posts` → retorna todos os posts, ordenados por `criado_em` desc.
-- `POST /api/posts` → cria post com payload JSON `{ "titulo", "conteudo", "autor" }`.
+## Migrações SQL
 
-### Rodando localmente
+- `server/migrations/001_create_posts.sql`
+- `server/migrations/002_create_finance_tables.sql`
+
+## Endpoints
+
+### Posts
+
+- `GET /api/posts`
+- `POST /api/posts`
+
+### Financeiro (por tipo de dado)
+
+- `GET /api/finance/cards`
+- `PUT /api/finance/cards`
+- `GET /api/finance/fixed-expenses`
+- `PUT /api/finance/fixed-expenses`
+- `GET /api/finance/category-budgets`
+- `PUT /api/finance/category-budgets`
+- `GET /api/finance/transactions`
+- `PUT /api/finance/transactions`
+- `GET /api/finance/installment-purchases`
+- `PUT /api/finance/installment-purchases`
+- `GET /api/finance/settings`
+- `PUT /api/finance/settings`
+
+### Estado completo (bootstrap do app)
+
+- `GET /api/finance/state`
+- `PUT /api/finance/state`
+
+## Rodando localmente
 
 1. Configure a variável `DATABASE_URL`:
 
@@ -21,16 +55,18 @@ Os posts agora são persistidos no banco Postgres (Neon), sem uso de `localStora
 export DATABASE_URL='postgresql://...'
 ```
 
-2. Rode a API:
+2. Rode as migrações no seu banco Neon (via SQL editor/CLI).
+
+3. Rode a API:
 
 ```bash
 npm run api
 ```
 
-3. Em outro terminal, rode o front-end:
+4. Em outro terminal, rode o front-end:
 
 ```bash
 npm run dev
 ```
 
-> Opcional: `npm run dev:full` para subir API + front-end juntos (requer dependências instaladas).
+> Opcional: `npm run dev:full` para subir API + front-end juntos.

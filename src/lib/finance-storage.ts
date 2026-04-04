@@ -23,8 +23,7 @@ export interface FinanceState {
   selectedCycle: string;
 }
 
-const LOCAL_STORAGE_KEY = "cycle-finance-state-v2";
-const LEGACY_LOCAL_STORAGE_KEY = "cycle-finance-data";
+const LEGACY_LOCAL_STORAGE_KEYS = ["cycle-finance-state-v2", "cycle-finance-data"];
 
 export const defaultFinanceState: FinanceState = {
   cards: defaultCards,
@@ -93,25 +92,32 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
-function getLocalState(): FinanceState | null {
-  if (!isBrowser()) return null;
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    ...init,
+  });
 
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return normalizeState(JSON.parse(raw) as Partial<FinanceState>);
-  } catch {
-    return null;
+  if (!response.ok) {
+    throw new Error(`Falha em ${url}: ${response.status}`);
   }
+
+  return response.json() as Promise<T>;
 }
 
 export function getLegacyLocalState(): FinanceState | null {
   if (!isBrowser()) return null;
 
   try {
-    const raw = localStorage.getItem(LEGACY_LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return normalizeState(JSON.parse(raw) as Partial<FinanceState>);
+    for (const key of LEGACY_LOCAL_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      return normalizeState(JSON.parse(raw) as Partial<FinanceState>);
+    }
+    return null;
   } catch {
     return null;
   }
@@ -119,22 +125,29 @@ export function getLegacyLocalState(): FinanceState | null {
 
 export function clearLegacyLocalState() {
   if (!isBrowser()) return;
-  localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
-}
-
-function saveLocalState(state: FinanceState) {
-  if (!isBrowser()) return;
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+LEGACY_LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
 }
 
 export async function fetchFinanceState(): Promise<FinanceState | null> {
   if (!isBrowser()) return null;
-  return getLocalState();
+
+  try {
+    const raw = await requestJson<Partial<FinanceState>>("/api/finance/state");
+    if (!raw || Object.keys(raw).length === 0) {
+      return null;
+    }
+    return normalizeState(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
   if (!isBrowser()) return;
-  saveLocalState(state);
+  await requestJson<FinanceState>("/api/finance/state", {
+    method: "PUT",
+    body: JSON.stringify(state),
+  });
 }
 
 export function createEntityId() {
