@@ -1,45 +1,36 @@
 # Cycle Finance Engine
 
-## Persistência de dados com Local Storage
+## Persistência de dados financeiros
 
-A camada de dados funciona de forma 100% local usando `localStorage`.
+A camada financeira do app continua 100% local usando `localStorage` (`src/lib/finance-storage.ts`).
 
-## Arquitetura
+## Persistência de posts com Postgres (Neon)
 
-- Front-end lê e salva estado financeiro por `src/lib/finance-storage.ts`.
-- O estado é persistido na chave `cycle-finance-state-v2`.
-- Existe migração automática da chave legada `cycle-finance-data`.
+Os posts agora são persistidos no banco Postgres (Neon), sem uso de `localStorage` para posts.
 
-## Integração com Postgres (Neon)
+### Endpoints
 
-Foi adicionada uma camada backend simples em `server/` para persistir posts no Neon usando o driver `pg`.
+- `GET /api/posts` → retorna todos os posts, ordenados por `criado_em` desc.
+- `POST /api/posts` → cria post com payload JSON `{ "titulo", "conteudo", "autor" }`.
 
-### 1) Instalar dependências
+### Rodando localmente
 
-```bash
-npm install
-```
-
-> Observação: este ambiente bloqueou acesso ao npm registry (erro 403), então a dependência foi adicionada ao `package.json`, mas a instalação precisa ser executada em um ambiente com acesso ao registry.
-
-### 2) Configurar a URL do banco
-
-Defina a variável `DATABASE_URL` no ambiente do backend:
+1. Configure a variável `DATABASE_URL`:
 
 ```bash
 export DATABASE_URL='postgresql://...'
 ```
 
-### 3) Criar tabela de posts
+2. Rode a API:
 
 ```bash
-npm run db:init
+npm run api
 ```
 
-### 4) Funções disponíveis
+3. Em outro terminal, rode o front-end:
 
-No arquivo `server/posts.js`:
+```bash
+npm run dev
+```
 
-- `createPostsTable()` → cria tabela e índice.
-- `savePost({ title, content, author })` → salva post.
-- `getPosts({ limit, offset })` → busca posts ordenados pelos mais recentes.
+> Opcional: `npm run dev:full` para subir API + front-end juntos (requer dependências instaladas).
