@@ -1,45 +1,31 @@
 # Cycle Finance Engine
 
-## Persistência com Vercel Edge Config
+## Persistência de dados com Vercel Edge Config
 
-A persistência foi ajustada para usar **Vercel Edge Config** como fonte remota e `localStorage` como fallback local.
+A camada de dados foi refeita para funcionar com **Vercel Edge Config** como banco remoto e `localStorage` como cache/fallback local.
 
-### 1) Variáveis de ambiente
+## Arquitetura
 
-No projeto Vercel, conecte o **Edge Config Store** ao projeto e rode:
+- Front-end lê e salva estado financeiro por `src/lib/finance-storage.ts`.
+- A API `api/finance-state.ts` faz:
+  - `GET` do item `finance_state` no Edge Config.
+  - `POST` (upsert) no mesmo item via API de gerenciamento da Vercel.
+- Em falha remota, o app continua funcionando localmente sem bloquear a UI.
+
+## Variáveis de ambiente
+
+Configure no projeto Vercel:
 
 ```bash
-vercel env pull
-```
-
-Para escrita pelo app (salvar alterações), configure também:
-
-```bash
+EDGE_CONFIG=...
 EDGE_CONFIG_ID=...
 EDGE_CONFIG_TOKEN=...
 ```
 
-> `EDGE_CONFIG` é usado para leitura remota.
-> `EDGE_CONFIG_ID` + `EDGE_CONFIG_TOKEN` são usados pela rota `/api/finance-state` para `PATCH` de itens.
+- `EDGE_CONFIG`: connection string usada para leitura.
+- `EDGE_CONFIG_ID` + `EDGE_CONFIG_TOKEN`: credenciais para escrita (`PATCH` de itens).
 
-### 2) Instalar pacote do Edge Config SDK
+## Item persistido no Edge Config
 
-```bash
-npm install @vercel/edge-config
-```
-
-### 3) Item usado no Edge Config
-
-O app salva e lê o estado financeiro no item:
-
-- `finance_state`
-
-### 4) Middleware de teste (conforme tutorial)
-
-Foi adicionado `middleware.js` com matcher `/welcome`, lendo a chave `greeting` do Edge Config.
-
-Acesse:
-
-- `/welcome`
-
-para validar o fluxo da documentação da Vercel.
+- Chave: `finance_state`
+- Valor: objeto JSON com o estado completo das finanças.
