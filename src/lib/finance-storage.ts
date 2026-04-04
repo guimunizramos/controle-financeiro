@@ -23,11 +23,6 @@ export interface FinanceState {
   selectedCycle: string;
 }
 
-interface FinanceApiPayload {
-  state: FinanceState | null;
-  source: "edge-config" | "local";
-}
-
 const LOCAL_STORAGE_KEY = "cycle-finance-state-v2";
 const LEGACY_LOCAL_STORAGE_KEY = "cycle-finance-data";
 
@@ -127,87 +122,19 @@ export function clearLegacyLocalState() {
   localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
 }
 
-function clearCurrentLocalState() {
-  if (!isBrowser()) return;
-  localStorage.removeItem(LOCAL_STORAGE_KEY);
-}
-
 function saveLocalState(state: FinanceState) {
   if (!isBrowser()) return;
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
 }
 
-async function fetchRemoteState(): Promise<FinanceApiPayload | null> {
-  const response = await fetch("/api/finance-state", {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar estado financeiro remoto (${response.status}).`);
-  }
-
-  const payload = (await response.json()) as Partial<FinanceApiPayload>;
-  if (!payload || !("state" in payload)) {
-    throw new Error("Payload da API inválido.");
-  }
-
-  if (!payload.state) {
-    return {
-      state: null,
-      source: payload.source ?? "edge-config",
-    };
-  }
-
-  return {
-    state: normalizeState(payload.state),
-    source: payload.source ?? "edge-config",
-  };
-}
-
-async function saveRemoteState(state: FinanceState): Promise<void> {
-  const response = await fetch("/api/finance-state", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ state }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Falha ao salvar estado financeiro remoto (${response.status}).`);
-  }
-}
-
 export async function fetchFinanceState(): Promise<FinanceState | null> {
   if (!isBrowser()) return null;
-
-  try {
-    const remote = await fetchRemoteState();
-    if (remote?.state) {
-      saveLocalState(remote.state);
-      return remote.state;
-    }
-
-    clearCurrentLocalState();
-    return null;
-  } catch {
-    return getLocalState();
-  }
+  return getLocalState();
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
   if (!isBrowser()) return;
-
   saveLocalState(state);
-
-  try {
-    await saveRemoteState(state);
-  } catch {
-    // Mantém o app utilizável offline/local mesmo sem escrita remota.
-  }
 }
 
 export function createEntityId() {
