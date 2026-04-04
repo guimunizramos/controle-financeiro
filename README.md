@@ -20,7 +20,7 @@ Os dados que antes eram salvos no `localStorage` foram separados em coleções d
 - `server/migrations/001_create_posts.sql`
 - `server/migrations/002_create_finance_tables.sql`
 
-## Endpoints
+## Endpoints (Vercel Functions em `/api`)
 
 ### Posts
 
@@ -57,10 +57,10 @@ export DATABASE_URL='postgresql://...'
 
 2. Rode as migrações no seu banco Neon (via SQL editor/CLI).
 
-3. Rode a API:
+3. Rode as Serverless Functions localmente (Vercel):
 
 ```bash
-npm run api
+npm run api:dev
 ```
 
 4. Em outro terminal, rode o front-end:
@@ -69,4 +69,4 @@ npm run api
 npm run dev
 ```
 
-> Opcional: `npm run dev:full` para subir API + front-end juntos.
+> Opcional: `npm run dev:full` para subir Functions + front-end juntos.
