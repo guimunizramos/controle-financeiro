@@ -1,40 +1,18 @@
 import { getDbPool } from "./db.js";
 
 /**
- * Garante que a tabela de posts exista no banco.
+ * Salva um novo post na tabela existente.
  */
-export async function createPostsTable() {
-  const pool = getDbPool();
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS posts (
-      id BIGSERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL,
-      author TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `);
-
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS posts_created_at_idx
-    ON posts (created_at DESC);
-  `);
-}
-
-/**
- * Salva um novo post.
- */
-export async function savePost({ title, content, author }) {
+export async function savePost({ titulo, conteudo, autor }) {
   const pool = getDbPool();
 
   const result = await pool.query(
     `
-      INSERT INTO posts (title, content, author)
+      INSERT INTO posts (titulo, conteudo, autor)
       VALUES ($1, $2, $3)
-      RETURNING id, title, content, author, created_at;
+      RETURNING id, titulo, conteudo, autor, criado_em;
     `,
-    [title, content, author],
+    [titulo, conteudo, autor],
   );
 
   return result.rows[0];
@@ -43,17 +21,15 @@ export async function savePost({ title, content, author }) {
 /**
  * Busca posts ordenados do mais recente para o mais antigo.
  */
-export async function getPosts({ limit = 20, offset = 0 } = {}) {
+export async function getPosts() {
   const pool = getDbPool();
 
   const result = await pool.query(
     `
-      SELECT id, title, content, author, created_at
+      SELECT id, titulo, conteudo, autor, criado_em
       FROM posts
-      ORDER BY created_at DESC
-      LIMIT $1 OFFSET $2;
+      ORDER BY criado_em DESC;
     `,
-    [limit, offset],
   );
 
   return result.rows;
