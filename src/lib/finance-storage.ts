@@ -164,24 +164,34 @@ export function clearLegacyLocalState() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+function saveLocalState(state: FinanceState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
 export async function fetchFinanceState(): Promise<FinanceState | null> {
-  if (!supabase || !hasSupabaseEnv) return null;
+  if (!supabase || !hasSupabaseEnv) return getLegacyLocalState();
 
-  const [configResult, transactionsResult, installmentsResult] = await Promise.all([
-    supabase.from("configurations").select("*").eq("id", CONFIG_ID).maybeSingle<ConfigurationRow>(),
-    supabase.from("transactions").select("*").order("date", { ascending: false }).returns<TransactionRow[]>(),
-    supabase.from("installment_purchases").select("*").order("first_installment_date", { ascending: true }).returns<InstallmentPurchaseRow[]>(),
-  ]);
+  try {
+    const [configResult, transactionsResult, installmentsResult] = await Promise.all([
+      supabase.from("configurations").select("*").eq("id", CONFIG_ID).maybeSingle<ConfigurationRow>(),
+      supabase.from("transactions").select("*").order("date", { ascending: false }).returns<TransactionRow[]>(),
+      supabase.from("installment_purchases").select("*").order("first_installment_date", { ascending: true }).returns<InstallmentPurchaseRow[]>(),
+    ]);
 
-  if (configResult.error) throw configResult.error;
-  if (transactionsResult.error) throw transactionsResult.error;
-  if (installmentsResult.error) throw installmentsResult.error;
-  if (!configResult.data) return null;
+    if (configResult.error) throw configResult.error;
+    if (transactionsResult.error) throw transactionsResult.error;
+    if (installmentsResult.error) throw installmentsResult.error;
+    if (!configResult.data) return null;
 
-  return fromDbRows(configResult.data, transactionsResult.data ?? [], installmentsResult.data ?? []);
+    return fromDbRows(configResult.data, transactionsResult.data ?? [], installmentsResult.data ?? []);
+  } catch (error) {
+    console.error("Falha ao carregar do Supabase. Usando cache local.", error);
+    return getLegacyLocalState();
+  }
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
+  saveLocalState(state);
   if (!supabase || !hasSupabaseEnv) return;
 
   const cards = state.cards.map((card) => ({ ...card }));
@@ -222,23 +232,27 @@ export async function saveFinanceState(state: FinanceState): Promise<void> {
     last_installment_cycle: purchase.lastInstallmentCycle,
   }));
 
-  const configUpsert = await supabase.from("configurations").upsert(configurationPayload, { onConflict: "id" });
-  if (configUpsert.error) throw configUpsert.error;
+  try {
+    const configUpsert = await supabase.from("configurations").upsert(configurationPayload, { onConflict: "id" });
+    if (configUpsert.error) throw configUpsert.error;
 
-  const deleteTransactions = await supabase.from("transactions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  if (deleteTransactions.error) throw deleteTransactions.error;
+    const deleteTransactions = await supabase.from("transactions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (deleteTransactions.error) throw deleteTransactions.error;
 
-  const deleteInstallments = await supabase.from("installment_purchases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  if (deleteInstallments.error) throw deleteInstallments.error;
+    const deleteInstallments = await supabase.from("installment_purchases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (deleteInstallments.error) throw deleteInstallments.error;
 
-  if (transactionPayload.length > 0) {
-    const insertTransactions = await supabase.from("transactions").insert(transactionPayload);
-    if (insertTransactions.error) throw insertTransactions.error;
-  }
+    if (transactionPayload.length > 0) {
+      const insertTransactions = await supabase.from("transactions").insert(transactionPayload);
+      if (insertTransactions.error) throw insertTransactions.error;
+    }
 
-  if (installmentPayload.length > 0) {
-    const insertInstallments = await supabase.from("installment_purchases").insert(installmentPayload);
-    if (insertInstallments.error) throw insertInstallments.error;
+    if (installmentPayload.length > 0) {
+      const insertInstallments = await supabase.from("installment_purchases").insert(installmentPayload);
+      if (insertInstallments.error) throw insertInstallments.error;
+    }
+  } catch (error) {
+    console.error("Falha ao salvar no Supabase. Dados mantidos no navegador.", error);
   }
 }
 

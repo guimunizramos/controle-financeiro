@@ -19,6 +19,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 Execute o SQL em `supabase/schema.sql` no seu projeto Supabase.
 
+### RLS (obrigatório para leitura/escrita com `anon key`)
+
+Se o Row Level Security estiver ativo, execute também `supabase/rls-policies.sql`.
+Sem essas policies, o app pode abrir com dados padrão e não persistir mudanças no banco.
+
 ### Migração inicial
 
 Na primeira execução:
