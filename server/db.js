@@ -10,6 +10,12 @@ export function getDbPool() {
   const connectionString = process.env.storage_POSTGRES_URL;
 
   if (!connectionString) {
+    console.log(
+      "ENV vars disponíveis:",
+      Object.keys(process.env).filter(
+        (k) => k.includes("POSTGRES") || k.includes("DATABASE"),
+      ),
+    );
     throw new Error(
       "Nenhuma URL de banco configurada. Defina storage_POSTGRES_URL nas variáveis de ambiente da Vercel.",
     );
