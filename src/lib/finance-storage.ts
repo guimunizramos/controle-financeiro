@@ -63,7 +63,14 @@ function normalizeState(raw: Partial<FinanceState>): FinanceState {
 
   return {
     cards: (raw.cards ?? defaultCards).map((card) => {
-      const legacyCard = card as { name?: string; owner?: string; bank?: string; limit: number; closingDay: number; dueDay: number };
+      const legacyCard = card as {
+        name?: string;
+        owner?: string;
+        bank?: string;
+        limit: number;
+        closingDay: number;
+        dueDay: number;
+      };
       return {
         owner: legacyCard.owner ?? legacyCard.name ?? "Sem nome",
         bank: legacyCard.bank ?? "Principal",
@@ -81,7 +88,13 @@ function normalizeState(raw: Partial<FinanceState>): FinanceState {
   };
 }
 
-export function getLegacyLocalState(): FinanceState | null {
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
+function getLocalState(): FinanceState | null {
+  if (!isBrowser()) return null;
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -91,73 +104,26 @@ export function getLegacyLocalState(): FinanceState | null {
   }
 }
 
-export function clearLegacyLocalState() {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 function saveLocalState(state: FinanceState) {
+  if (!isBrowser()) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-async function fetchFromEdgeConfigApi(): Promise<FinanceState | null> {
-  const response = await fetch("/api/finance-state", {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Edge Config GET falhou: ${response.status}`);
-  }
-
-  const payload = (await response.json()) as { state?: Partial<FinanceState> | null };
-  if (!payload?.state) return null;
-  return normalizeState(payload.state);
-}
-
-async function saveToEdgeConfigApi(state: FinanceState): Promise<void> {
-  const response = await fetch("/api/finance-state", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ state }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Edge Config POST falhou: ${response.status}`);
-  }
-}
-
 export async function fetchFinanceState(): Promise<FinanceState | null> {
-  if (!isBrowser()) return null;
-
-  try {
-    const edgeState = await fetchFromEdgeConfigApi();
-    if (edgeState) {
-      saveLocalState(edgeState);
-    }
-    return edgeState;
-  } catch {
-    return getLegacyLocalState();
-  }
+  return getLocalState();
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
-  if (!isBrowser()) return;
-
   saveLocalState(state);
+}
 
-  try {
-    await saveToEdgeConfigApi(state);
-  } catch {
-    // Mantém funcionamento local quando API/credenciais não estiverem disponíveis.
-  }
+export function getLegacyLocalState(): FinanceState | null {
+  return getLocalState();
+}
+
+export function clearLegacyLocalState() {
+  if (!isBrowser()) return;
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 export function createEntityId() {
