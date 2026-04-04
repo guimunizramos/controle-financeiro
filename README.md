@@ -1,29 +1,45 @@
 # Cycle Finance Engine
 
-## Supabase persistence
+## Persistência com Vercel Edge Config
 
-A persistência foi migrada de `localStorage` para Supabase (PostgreSQL) para manter os dados entre navegadores/dispositivos.
+A persistência foi ajustada para usar **Vercel Edge Config** como fonte remota e `localStorage` como fallback local.
 
-### Variáveis de ambiente
+### 1) Variáveis de ambiente
 
-Configure no `.env`:
+No projeto Vercel, conecte o **Edge Config Store** ao projeto e rode:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+vercel env pull
 ```
 
-> Em Vite, também é aceito `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` como fallback.
+Para escrita pelo app (salvar alterações), configure também:
 
-### Schema
+```bash
+EDGE_CONFIG_ID=...
+EDGE_CONFIG_TOKEN=...
+```
 
-Execute o SQL em `supabase/schema.sql` no seu projeto Supabase.
+> `EDGE_CONFIG` é usado para leitura remota.
+> `EDGE_CONFIG_ID` + `EDGE_CONFIG_TOKEN` são usados pela rota `/api/finance-state` para `PATCH` de itens.
 
-### Migração inicial
+### 2) Instalar pacote do Edge Config SDK
 
-Na primeira execução:
+```bash
+npm install @vercel/edge-config
+```
 
-1. O app tenta carregar dados do Supabase.
-2. Se não existir registro remoto, ele lê o `localStorage` legado (`cycle-finance-data`).
-3. Se encontrar dados legados, salva tudo no Supabase e remove o payload local.
-4. Se não houver nada, sobe os dados padrão no banco.
+### 3) Item usado no Edge Config
+
+O app salva e lê o estado financeiro no item:
+
+- `finance_state`
+
+### 4) Middleware de teste (conforme tutorial)
+
+Foi adicionado `middleware.js` com matcher `/welcome`, lendo a chave `greeting` do Edge Config.
+
+Acesse:
+
+- `/welcome`
+
+para validar o fluxo da documentação da Vercel.

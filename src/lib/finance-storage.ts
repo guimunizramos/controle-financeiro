@@ -12,7 +12,6 @@ import {
   type InstallmentPurchase,
   type Transaction,
 } from "@/lib/finance-data";
-import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 
 export interface FinanceState {
   cards: Card[];
@@ -25,41 +24,6 @@ export interface FinanceState {
 }
 
 const STORAGE_KEY = "cycle-finance-data";
-const CONFIG_ID = "11111111-1111-1111-1111-111111111111";
-
-interface ConfigurationRow {
-  id: string;
-  reference_income: string;
-  selected_cycle: string;
-  cards: Card[];
-  fixed_expenses: FixedExpense[];
-  category_budgets: CategoryBudget[];
-}
-
-interface TransactionRow {
-  id: string;
-  date: string;
-  description: string;
-  amount: string;
-  card: string;
-  category: string;
-  cycle: string;
-  installment_purchase_id: string | null;
-}
-
-interface InstallmentPurchaseRow {
-  id: string;
-  description: string;
-  total_value: string;
-  total_installments: number;
-  paid_installments: number;
-  installment_value: string;
-  card_origin_id: string;
-  category: string;
-  first_installment_date: string;
-  first_cycle: string;
-  last_installment_cycle: string;
-}
 
 export const defaultFinanceState: FinanceState = {
   cards: defaultCards,
@@ -117,39 +81,6 @@ function normalizeState(raw: Partial<FinanceState>): FinanceState {
   };
 }
 
-function fromDbRows(configuration: ConfigurationRow, rows: TransactionRow[], installmentRows: InstallmentPurchaseRow[]): FinanceState {
-  return {
-    cards: configuration.cards,
-    fixedExpenses: configuration.fixed_expenses,
-    categoryBudgets: configuration.category_budgets.filter((category) => category.name !== "Caixa"),
-    transactions: rows.map((row) => ({
-      id: row.id,
-      date: row.date,
-      description: row.description,
-      amount: Number(row.amount),
-      card: normalizeCardLabel(row.card),
-      category: row.category,
-      cycle: row.cycle,
-      installmentPurchaseId: row.installment_purchase_id ?? undefined,
-    })),
-    installmentPurchases: installmentRows.map((row) => ({
-      id: row.id,
-      description: row.description,
-      totalValue: Number(row.total_value),
-      totalInstallments: row.total_installments,
-      paidInstallments: row.paid_installments,
-      installmentValue: Number(row.installment_value),
-      cardOriginId: row.card_origin_id,
-      category: row.category,
-      firstInstallmentDate: row.first_installment_date,
-      firstCycle: row.first_cycle,
-      lastInstallmentCycle: row.last_installment_cycle,
-    })),
-    referenceIncome: Number(configuration.reference_income),
-    selectedCycle: configuration.selected_cycle,
-  };
-}
-
 export function getLegacyLocalState(): FinanceState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -168,84 +99,64 @@ function saveLocalState(state: FinanceState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
+async function fetchFromEdgeConfigApi(): Promise<FinanceState | null> {
+  const response = await fetch("/api/finance-state", {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Edge Config GET falhou: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { state?: Partial<FinanceState> | null };
+  if (!payload?.state) return null;
+  return normalizeState(payload.state);
+}
+
+async function saveToEdgeConfigApi(state: FinanceState): Promise<void> {
+  const response = await fetch("/api/finance-state", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ state }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Edge Config POST falhou: ${response.status}`);
+  }
+}
+
 export async function fetchFinanceState(): Promise<FinanceState | null> {
-  if (!supabase || !hasSupabaseEnv) return getLegacyLocalState();
+  if (!isBrowser()) return null;
 
-  const [configResult, transactionsResult, installmentsResult] = await Promise.all([
-    supabase.from("configurations").select("*").eq("id", CONFIG_ID).maybeSingle<ConfigurationRow>(),
-    supabase.from("transactions").select("*").order("date", { ascending: false }).returns<TransactionRow[]>(),
-    supabase.from("installment_purchases").select("*").order("first_installment_date", { ascending: true }).returns<InstallmentPurchaseRow[]>(),
-  ]);
-
-  if (configResult.error) throw configResult.error;
-  if (transactionsResult.error) throw transactionsResult.error;
-  if (installmentsResult.error) throw installmentsResult.error;
-  if (!configResult.data) return null;
-
-  return fromDbRows(configResult.data, transactionsResult.data ?? [], installmentsResult.data ?? []);
+  try {
+    const edgeState = await fetchFromEdgeConfigApi();
+    if (edgeState) {
+      saveLocalState(edgeState);
+    }
+    return edgeState;
+  } catch {
+    return getLegacyLocalState();
+  }
 }
 
 export async function saveFinanceState(state: FinanceState): Promise<void> {
-  if (!supabase || !hasSupabaseEnv) {
-    saveLocalState(state);
-    return;
-  }
+  if (!isBrowser()) return;
 
-  const cards = state.cards.map((card) => ({ ...card }));
-  const fixedExpenses = state.fixedExpenses.map((expense) => ({ ...expense }));
-  const categoryBudgets = state.categoryBudgets.filter((category) => category.name !== "Caixa").map((category) => ({ ...category }));
+  saveLocalState(state);
 
-  const configurationPayload = {
-    id: CONFIG_ID,
-    reference_income: state.referenceIncome,
-    selected_cycle: state.selectedCycle,
-    cards,
-    fixed_expenses: fixedExpenses,
-    category_budgets: categoryBudgets,
-  };
-
-  const transactionPayload = state.transactions.map((transaction) => ({
-    id: transaction.id,
-    date: transaction.date,
-    description: transaction.description,
-    amount: transaction.amount,
-    card: normalizeCardLabel(transaction.card),
-    category: transaction.category,
-    cycle: transaction.cycle,
-    installment_purchase_id: transaction.installmentPurchaseId ?? null,
-  }));
-
-  const installmentPayload = state.installmentPurchases.map((purchase) => ({
-    id: purchase.id,
-    description: purchase.description,
-    total_value: purchase.totalValue,
-    total_installments: purchase.totalInstallments,
-    paid_installments: purchase.paidInstallments,
-    installment_value: purchase.installmentValue,
-    card_origin_id: purchase.cardOriginId,
-    category: purchase.category,
-    first_installment_date: purchase.firstInstallmentDate,
-    first_cycle: purchase.firstCycle,
-    last_installment_cycle: purchase.lastInstallmentCycle,
-  }));
-
-  const configUpsert = await supabase.from("configurations").upsert(configurationPayload, { onConflict: "id" });
-  if (configUpsert.error) throw configUpsert.error;
-
-  const deleteTransactions = await supabase.from("transactions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  if (deleteTransactions.error) throw deleteTransactions.error;
-
-  const deleteInstallments = await supabase.from("installment_purchases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  if (deleteInstallments.error) throw deleteInstallments.error;
-
-  if (transactionPayload.length > 0) {
-    const insertTransactions = await supabase.from("transactions").insert(transactionPayload);
-    if (insertTransactions.error) throw insertTransactions.error;
-  }
-
-  if (installmentPayload.length > 0) {
-    const insertInstallments = await supabase.from("installment_purchases").insert(installmentPayload);
-    if (insertInstallments.error) throw insertInstallments.error;
+  try {
+    await saveToEdgeConfigApi(state);
+  } catch {
+    // Mantém funcionamento local quando API/credenciais não estiverem disponíveis.
   }
 }
 
