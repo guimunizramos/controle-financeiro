@@ -37,3 +37,9 @@ Acesse:
 - `/api/welcome`
 
 para validar o fluxo da documentação da Vercel.
+
+### 4) Importante para evitar conflito de merge/deploy
+
+- Use **somente** `api/welcome.ts` (Edge Function).
+- **Não** use `middleware.js` com `next/server` neste projeto Vite.
+- Se aparecer conflito entre versões de README, mantenha a versão que referencia `/api/welcome` e remova qualquer bloco sobre `middleware.js`/`/welcome`.
