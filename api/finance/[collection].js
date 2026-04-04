@@ -1,5 +1,5 @@
 import { getFinanceCollection, replaceFinanceCollection } from "../../server/finance.js";
-import { handleOptions, json, readBody } from "../_lib/http.js";
+import { getErrorMessage, handleOptions, json, readBody } from "../_lib/http.js";
 
 const COLLECTION_ROUTE_MAP = {
   cards: "cards",
@@ -27,7 +27,10 @@ export default async function handler(req, res) {
       return json(res, 200, items);
     } catch (error) {
       console.error(`Erro ao buscar ${collectionType}:`, error);
-      return json(res, 500, { error: `Falha ao buscar ${collectionType}` });
+      return json(res, 500, {
+        error: `Falha ao buscar ${collectionType}`,
+        details: getErrorMessage(error),
+      });
     }
   }
 
@@ -42,7 +45,10 @@ export default async function handler(req, res) {
       return json(res, 200, saved);
     } catch (error) {
       console.error(`Erro ao salvar ${collectionType}:`, error);
-      return json(res, 500, { error: `Falha ao salvar ${collectionType}` });
+      return json(res, 500, {
+        error: `Falha ao salvar ${collectionType}`,
+        details: getErrorMessage(error),
+      });
     }
   }
 

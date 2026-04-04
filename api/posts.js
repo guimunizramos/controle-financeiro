@@ -1,5 +1,5 @@
 import { getPosts, savePost } from "../server/posts.js";
-import { handleOptions, json, readBody } from "./_lib/http.js";
+import { getErrorMessage, handleOptions, json, readBody } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (handleOptions(req, res)) {
@@ -12,7 +12,10 @@ export default async function handler(req, res) {
       return json(res, 200, posts);
     } catch (error) {
       console.error("Erro ao buscar posts:", error);
-      return json(res, 500, { error: "Falha ao buscar posts" });
+      return json(res, 500, {
+        error: "Falha ao buscar posts",
+        details: getErrorMessage(error),
+      });
     }
   }
 
@@ -31,7 +34,10 @@ export default async function handler(req, res) {
       return json(res, 201, created);
     } catch (error) {
       console.error("Erro ao criar post:", error);
-      return json(res, 500, { error: "Falha ao criar post" });
+      return json(res, 500, {
+        error: "Falha ao criar post",
+        details: getErrorMessage(error),
+      });
     }
   }
 

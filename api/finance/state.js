@@ -1,5 +1,5 @@
 import { getFinanceState, saveFinanceState } from "../../server/finance.js";
-import { handleOptions, json, readBody } from "../_lib/http.js";
+import { getErrorMessage, handleOptions, json, readBody } from "../_lib/http.js";
 
 export default async function handler(req, res) {
   if (handleOptions(req, res)) {
@@ -12,7 +12,10 @@ export default async function handler(req, res) {
       return json(res, 200, state ?? {});
     } catch (error) {
       console.error("Erro ao carregar estado financeiro:", error);
-      return json(res, 500, { error: "Falha ao carregar estado financeiro" });
+      return json(res, 500, {
+        error: "Falha ao carregar estado financeiro",
+        details: getErrorMessage(error),
+      });
     }
   }
 
@@ -23,7 +26,10 @@ export default async function handler(req, res) {
       return json(res, 200, saved);
     } catch (error) {
       console.error("Erro ao salvar estado financeiro:", error);
-      return json(res, 500, { error: "Falha ao salvar estado financeiro" });
+      return json(res, 500, {
+        error: "Falha ao salvar estado financeiro",
+        details: getErrorMessage(error),
+      });
     }
   }
 

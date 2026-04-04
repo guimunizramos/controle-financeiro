@@ -7,10 +7,15 @@ export function getDbPool() {
     return pool;
   }
 
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString =
+    process.env.storage_POSTGRES_URL ??
+    process.env.storage_DATABASE_URL_UNPOOLED ??
+    process.env.DATABASE_URL;
 
   if (!connectionString) {
-    throw new Error("DATABASE_URL não definida. Configure a URL do Neon nas variáveis de ambiente.");
+    throw new Error(
+      "Nenhuma URL de banco configurada. Defina storage_POSTGRES_URL ou storage_DATABASE_URL_UNPOOLED nas variáveis de ambiente da Vercel.",
+    );
   }
 
   pool = new Pool({
