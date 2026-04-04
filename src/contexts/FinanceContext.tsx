@@ -67,7 +67,7 @@ function cycleToKey(cycle: string): number {
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FinanceState>(defaultFinanceState);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLoadedFromRemote, setHasLoadedFromRemote] = useState(false);
+  const [hasInitializedStorage, setHasInitializedStorage] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -79,7 +79,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
         if (dbState) {
           setState(dbState);
-          setHasLoadedFromRemote(true);
+          setHasInitializedStorage(true);
           return;
         }
 
@@ -88,13 +88,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           setState(legacyState);
           await saveFinanceState(legacyState);
           clearLegacyLocalState();
-          setHasLoadedFromRemote(true);
+          setHasInitializedStorage(true);
           return;
         }
 
         await saveFinanceState(defaultFinanceState);
         setState(defaultFinanceState);
-        setHasLoadedFromRemote(true);
+        setHasInitializedStorage(true);
       } catch (error) {
         console.error("Erro ao carregar dados financeiros:", error);
       } finally {
@@ -118,9 +118,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [state.categoryBudgets, state.referenceIncome]);
 
   useEffect(() => {
-    if (!hasLoadedFromRemote) return;
+    if (!hasInitializedStorage) return;
     void saveFinanceState({ ...state, categoryBudgets: state.categoryBudgets });
-  }, [state, hasLoadedFromRemote]);
+  }, [state, hasInitializedStorage]);
 
   const addCard = useCallback((card: Card) => {
     setState((s) => ({ ...s, cards: [...s.cards, card] }));
