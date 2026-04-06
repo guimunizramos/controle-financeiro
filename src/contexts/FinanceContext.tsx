@@ -9,11 +9,15 @@ import {
 } from "@/lib/finance-data";
 import {
   createEntityId,
+  createEntry,
   defaultFinanceState,
+  fetchEntries,
   fetchFinanceState,
   saveFinanceState,
   getLegacyLocalState,
   clearLegacyLocalState,
+  removeEntry as removeEntryFromStorage,
+  type Entry,
   type FinanceState,
 } from "@/lib/finance-storage";
 
@@ -42,6 +46,8 @@ interface FinanceContextType extends FinanceState {
   removeTransaction: (index: number) => void;
   addInstallmentPurchase: (input: AddInstallmentPurchaseInput) => void;
   markInstallmentAsPaid: (purchaseId: string) => void;
+  addEntry: (entry: Entry) => Promise<Entry>;
+  removeEntry: (id: number) => Promise<void>;
   setReferenceIncome: (value: number) => void;
   setSelectedCycle: (cycle: string) => void;
   availableCycles: string[];
@@ -75,17 +81,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const initialize = async () => {
       try {
         const dbState = await fetchFinanceState();
+        const entries = await fetchEntries();
         if (!active) return;
 
         if (dbState) {
-          setState(dbState);
+          setState({ ...dbState, entries });
           setHasInitializedStorage(true);
           return;
         }
 
         const legacyState = getLegacyLocalState();
         if (legacyState) {
-          setState(legacyState);
+          setState({ ...legacyState, entries });
           await saveFinanceState(legacyState);
           clearLegacyLocalState();
           setHasInitializedStorage(true);
@@ -93,7 +100,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
 
         await saveFinanceState(defaultFinanceState);
-        setState(defaultFinanceState);
+        setState({ ...defaultFinanceState, entries });
         setHasInitializedStorage(true);
       } catch (error) {
         console.error("Erro ao carregar dados financeiros:", error);
@@ -215,6 +222,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const addEntry = useCallback(async (entry: Entry): Promise<Entry> => {
+    const created = await createEntry(entry);
+    setState((s) => ({ ...s, entries: [created, ...s.entries] }));
+    return created;
+  }, []);
+
+  const removeEntry = useCallback(async (id: number): Promise<void> => {
+    await removeEntryFromStorage(id);
+    setState((s) => ({ ...s, entries: s.entries.filter((entry) => entry.id !== id) }));
+  }, []);
+
   const setReferenceIncome = useCallback((value: number) => {
     setState((s) => ({ ...s, referenceIncome: value }));
   }, []);
@@ -237,15 +255,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAvailableCash = useCallback(() => {
-    const cycle = state.selectedCycle;
-    const uniqueOwners = [...new Set(state.cards.map((card) => card.owner))];
-    const totalInvoices = uniqueOwners.reduce(
-      (sum, owner) =>
-        sum + state.transactions.filter((t) => getCardOwnerFromLabel(t.card) === owner && t.cycle === cycle).reduce((acc, t) => acc + t.amount, 0),
-      0
-    );
-    const totalFixed = state.fixedExpenses.reduce((sum, e) => sum + e.amount, 0);
-    return state.referenceIncome - totalInvoices - totalFixed;
+    const totalIncome = state.entries.filter((entry) => entry.type === "income").reduce((sum, entry) => sum + entry.amount, 0);
+    const totalOut = state.entries.filter((entry) => entry.type !== "income").reduce((sum, entry) => sum + entry.amount, 0);
+    return totalIncome - totalOut;
   }, [state]);
 
   const availableCycles = [...new Set([...state.transactions.map((tx) => tx.cycle), getCurrentCycle()])]
@@ -267,6 +279,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
     addTransaction, updateTransaction, removeTransaction,
     addInstallmentPurchase, markInstallmentAsPaid,
+    addEntry, removeEntry,
     setReferenceIncome, setSelectedCycle,
     availableCycles,
     getCardTotal, getCategoryTotal, getAvailableCash,

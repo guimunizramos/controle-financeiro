@@ -203,3 +203,27 @@ export async function saveFinanceState(state) {
 
   return normalized;
 }
+
+export async function getEntries(userKey = "default") {
+  const pool = getDbPool();
+  const result = await pool.query(
+    "SELECT * FROM finance_entries WHERE user_key = $1 ORDER BY date DESC",
+    [userKey],
+  );
+  return result.rows;
+}
+
+export async function addEntry(entry, userKey = "default") {
+  const pool = getDbPool();
+  const result = await pool.query(
+    `INSERT INTO finance_entries (user_key, type, description, amount, reference_id, cycle, date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [userKey, entry.type, entry.description, entry.amount, entry.reference_id || null, entry.cycle, entry.date],
+  );
+  return result.rows[0];
+}
+
+export async function deleteEntry(id, userKey = "default") {
+  const pool = getDbPool();
+  await pool.query("DELETE FROM finance_entries WHERE id = $1 AND user_key = $2", [id, userKey]);
+}
