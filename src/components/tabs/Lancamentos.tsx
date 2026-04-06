@@ -67,6 +67,10 @@ export function Lancamentos() {
       return sortOrder === "asc" ? diff : -diff;
     });
   }, [cardFilter, categoryFilter, cycleTx, sortOrder]);
+  const cycleEntriesTotal = useMemo(
+    () => cycleEntries.reduce((sum, entry) => sum + entry.amount, 0),
+    [cycleEntries]
+  );
 
   const sortedCycles = useMemo(
     () => [...availableCycles].sort((a, b) => availableCycles.indexOf(a) - availableCycles.indexOf(b)),
@@ -87,7 +91,7 @@ export function Lancamentos() {
   };
 
   const handleSubmitExpense = async () => {
-    if (!form.description || !form.amount || !form.card || !form.category) return;
+    if (!form.description.trim() || !form.amount || !form.card || !form.category || !form.date) return;
 
     const parsedAmount = Number.parseFloat(form.amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
@@ -192,7 +196,7 @@ export function Lancamentos() {
 
           <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
+              <Button type="button" size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
                 <Plus className="h-4 w-4" /> Novo Gasto
               </Button>
             </DialogTrigger>
@@ -255,7 +259,7 @@ export function Lancamentos() {
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Entradas</h3>
-          <span className="text-mono text-sm font-semibold text-primary">+{formatCurrency(cycleEntries.reduce((sum, entry) => sum + entry.amount, 0))}</span>
+          <span className="text-mono text-sm font-semibold text-primary">{formatCurrency(cycleEntriesTotal)}</span>
         </div>
         <div className="divide-y divide-border/50">
           {cycleEntries.length === 0 && (
@@ -264,7 +268,7 @@ export function Lancamentos() {
           {cycleEntries.map((entry) => (
             <div key={`${entry.id ?? `${entry.description}-${entry.date}-${entry.amount}`}`} className="group grid grid-cols-[1fr_100px_120px_40px] gap-2 px-5 py-3 items-center">
               <span className="text-sm font-medium">{entry.description}</span>
-              <span className="text-mono text-sm text-primary">+{formatCurrency(entry.amount)}</span>
+              <span className="text-mono text-sm text-primary">R$ {entry.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               <span className="text-mono text-xs text-muted-foreground">{new Date(entry.date).toLocaleDateString("pt-BR")}</span>
               <button
                 onClick={() => entry.id && void removeEntry(entry.id)}
