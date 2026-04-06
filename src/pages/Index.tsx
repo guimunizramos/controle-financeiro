@@ -5,7 +5,6 @@ import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
 import { ComprasParceladas } from "@/components/tabs/ComprasParceladas";
 import { useFinance } from "@/contexts/FinanceContext";
-import { PostsSection } from "@/components/posts/PostsSection";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -75,7 +74,6 @@ const Index = () => {
             <Configuracoes />
           </TabsContent>
         </Tabs>
-        <PostsSection />
       </main>
     </div>
   );

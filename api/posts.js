@@ -24,10 +24,10 @@ export default async function handler(req, res) {
       const parsed = await readBody(req);
       const titulo = String(parsed.titulo ?? "").trim();
       const conteudo = String(parsed.conteudo ?? "").trim();
-      const autor = String(parsed.autor ?? "").trim();
+      const autor = String(parsed.autor ?? "Anônimo").trim() || "Anônimo";
 
-      if (!titulo || !conteudo || !autor) {
-        return json(res, 400, { error: "Campos obrigatórios: titulo, conteudo, autor" });
+      if (!titulo || !conteudo) {
+        return json(res, 400, { error: "Campos obrigatórios: titulo, conteudo" });
       }
 
       const created = await savePost({ titulo, conteudo, autor });

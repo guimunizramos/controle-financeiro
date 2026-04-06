@@ -2,7 +2,6 @@ export type Post = {
   id: number;
   titulo: string;
   conteudo: string;
-  autor: string;
   criado_em: string;
 };
 
@@ -16,7 +15,7 @@ export async function fetchPosts(): Promise<Post[]> {
   return response.json();
 }
 
-export async function createPost(input: Omit<Post, "id" | "criado_em">): Promise<Post> {
+export async function createPost(input: Pick<Post, "titulo" | "conteudo">): Promise<Post> {
   const response = await fetch("/api/posts", {
     method: "POST",
     headers: {
