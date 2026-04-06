@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, getStatusTag } from "@/lib/finance-data";
+import { formatCurrency } from "@/lib/finance-data";
 import type { Card, CategoryBudget, FixedExpense } from "@/lib/finance-data";
 import { CreditCard, CalendarClock, Tag, DollarSign, Plus, Trash2, Pencil, Check, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -298,7 +298,14 @@ export function Configuracoes() {
 
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeDraft, setIncomeDraft] = useState(String(referenceIncome));
-  const caixaStatus = getStatusTag(caixaCategory && referenceIncome > 0 ? (caixaCategory.limit / referenceIncome) * 100 : 0);
+  const caixaPct = caixaCategory && referenceIncome > 0 ? (caixaCategory.limit / referenceIncome) * 100 : 0;
+  const caixaStatus = (() => {
+    if (caixaPct < 0) return { label: "CRÍTICO", className: "bg-destructive/15 text-destructive" };
+    if (caixaPct <= 10) return { label: "ALERTA", className: "bg-destructive/15 text-destructive" };
+    if (caixaPct <= 20) return { label: "ATENÇÃO", className: "bg-warning/15 text-warning" };
+    if (caixaPct <= 40) return { label: "BOM", className: "bg-primary/15 text-primary" };
+    return { label: "ÓTIMO", className: "bg-primary/15 text-primary" };
+  })();
 
   return (
     <div className="space-y-6">
@@ -329,9 +336,9 @@ export function Configuracoes() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold">Categoria Caixa</h3>
+              <h3 className="font-semibold">Caixa Previsto</h3>
             </div>
-            <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-2 py-1 text-xs font-semibold">
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${caixaStatus.className}`}>
               {caixaStatus.label}
             </span>
           </div>

@@ -2,6 +2,7 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency, getDaysUntilClosing, getStatusTag } from "@/lib/finance-data";
 import type { Card } from "@/lib/finance-data";
 import { CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const statusStyles = {
   ok: "text-primary",
@@ -16,11 +17,23 @@ const barStyles = {
 } as const;
 
 export function InvoiceCard({ card }: { card: Card }) {
-  const { getCardTotal, selectedCycle: cycle } = useFinance();
+  const { addEntry, getCardTotal, selectedCycle: cycle } = useFinance();
   const total = getCardTotal(card.owner, cycle);
   const pct = (total / card.limit) * 100;
   const status = getStatusTag(pct);
   const daysLeft = getDaysUntilClosing(card);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const handleMarkPaid = async () => {
+    await addEntry({
+      type: "invoice_paid",
+      description: `Fatura ${card.owner}`,
+      amount: total,
+      reference_id: card.owner,
+      cycle,
+      date: today,
+    });
+  };
 
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
@@ -45,6 +58,9 @@ export function InvoiceCard({ card }: { card: Card }) {
           Fecha em <span className="text-foreground font-medium">{daysLeft} dias</span> · Vence dia {card.dueDay}
         </p>
       </div>
+      <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={() => void handleMarkPaid()}>
+        Marcar fatura paga
+      </Button>
     </div>
   );
 }
