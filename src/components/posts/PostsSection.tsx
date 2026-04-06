@@ -11,7 +11,6 @@ export function PostsSection() {
   const [saving, setSaving] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [conteudo, setConteudo] = useState("");
-  const [autor, setAutor] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,11 +34,10 @@ export function PostsSection() {
 
     try {
       setSaving(true);
-      const novoPost = await createPost({ titulo, conteudo, autor });
+      const novoPost = await createPost({ titulo, conteudo });
       setPosts((current) => [novoPost, ...current]);
       setTitulo("");
       setConteudo("");
-      setAutor("");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Erro ao salvar post.");
     } finally {
@@ -67,12 +65,6 @@ export function PostsSection() {
               onChange={(event) => setConteudo(event.target.value)}
               required
             />
-            <Input
-              placeholder="Autor"
-              value={autor}
-              onChange={(event) => setAutor(event.target.value)}
-              required
-            />
             <Button type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Publicar"}
             </Button>
@@ -96,7 +88,7 @@ export function PostsSection() {
               <h3 className="font-semibold">{post.titulo}</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{post.conteudo}</p>
               <p className="text-xs text-muted-foreground">
-                Por {post.autor} em {new Date(post.criado_em).toLocaleString("pt-BR")}
+                {new Date(post.criado_em).toLocaleString("pt-BR")}
               </p>
             </article>
           ))}

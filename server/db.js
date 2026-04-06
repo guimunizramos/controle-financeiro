@@ -7,7 +7,12 @@ export function getDbPool() {
     return pool;
   }
 
-  const connectionString = process.env.storage_POSTGRES_URL;
+  const connectionString =
+    process.env.storage_POSTGRES_URL ||
+    process.env.storage_DATABASE_URL ||
+    process.env.storage_POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL;
 
   if (!connectionString) {
     console.log(
@@ -23,6 +28,9 @@ export function getDbPool() {
 
   pool = new Pool({
     connectionString,
+    max: 1,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000,
     ssl: {
       rejectUnauthorized: false,
     },
