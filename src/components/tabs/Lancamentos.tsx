@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { formatCurrency, getCardLabel } from "@/lib/finance-data";
+import { formatCurrency, getCardLabel, getCurrentCycle } from "@/lib/finance-data";
 import { ArrowDownLeft, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,19 +21,29 @@ import {
 } from "@/components/ui/dialog";
 
 export function Lancamentos() {
-  const { transactions, cards, categoryBudgets, addTransaction, removeTransaction, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
-  const [open, setOpen] = useState(false);
+  const { transactions, entries, removeEntry, addEntry, cards, categoryBudgets, addTransaction, removeTransaction, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [entryOpen, setEntryOpen] = useState(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     description: "",
     amount: "",
     card: "",
-    category: "Caixa",
+    category: "",
+  });
+  const [entryForm, setEntryForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    description: "",
+    amount: "",
   });
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [cardFilter, setCardFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
+  const cycleEntries = useMemo(
+    () => entries.filter((entry) => entry.type === "income" && entry.cycle === selectedCycle),
+    [entries, selectedCycle]
+  );
   const cycleTx = useMemo(
     () => [...transactions].filter((t) => t.cycle === selectedCycle),
     [selectedCycle, transactions]
@@ -76,7 +86,7 @@ export function Lancamentos() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmitExpense = async () => {
     if (!form.description || !form.amount || !form.card || !form.category) return;
 
     const parsedAmount = Number.parseFloat(form.amount);
@@ -91,14 +101,45 @@ export function Lancamentos() {
       cycle: selectedCycle,
     });
 
+    if (form.card === "Pix / Débito") {
+      await addEntry({
+        type: "pix_out",
+        amount: parsedAmount,
+        description: form.description.trim(),
+        date: form.date,
+        cycle: selectedCycle || getCurrentCycle(),
+      });
+    }
+
     setForm({
       date: new Date().toISOString().slice(0, 10),
       description: "",
       amount: "",
       card: "",
-      category: "Caixa",
+      category: "",
     });
-    setOpen(false);
+    setExpenseOpen(false);
+  };
+
+  const handleSubmitEntry = async () => {
+    if (!entryForm.description || !entryForm.amount) return;
+    const parsedAmount = Number.parseFloat(entryForm.amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
+
+    await addEntry({
+      type: "income",
+      description: entryForm.description.trim(),
+      amount: parsedAmount,
+      date: entryForm.date,
+      cycle: selectedCycle || getCurrentCycle(),
+    });
+
+    setEntryForm({
+      date: new Date().toISOString().slice(0, 10),
+      description: "",
+      amount: "",
+    });
+    setEntryOpen(false);
   };
 
   const cycleTotal = cycleTx.reduce((s, t) => s + t.amount, 0);
@@ -116,64 +157,125 @@ export function Lancamentos() {
           </button>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
-              <Plus className="h-4 w-4" /> Novo Gasto
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Registrar Gasto</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Data</Label>
-                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-secondary border-border" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Valor (R$)</Label>
-                  <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="bg-secondary border-border" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Categoria</Label>
-                  <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
-                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {categoryBudgets.map((category) => (
-                        <SelectItem key={category.name} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Descrição</Label>
-                <Input placeholder="Ex: iFood, Uber, Supermercado..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-secondary border-border" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Nome + Cartão</Label>
-                <Select value={form.card} onValueChange={(v) => setForm({ ...form, card: v })}>
-                  <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {cards.map((c, idx) => {
-                      const label = getCardLabel(c);
-                      return <SelectItem key={`${label}-${idx}`} value={label}>{label}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleSubmit} className="w-full gradient-primary text-primary-foreground">
-                Registrar Gasto
+        <div className="flex items-center gap-2">
+          <Dialog open={entryOpen} onOpenChange={setEntryOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Plus className="h-4 w-4" /> Nova Entrada
               </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border">
+              <DialogHeader>
+                <DialogTitle>Registrar Entrada</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Data</Label>
+                    <Input type="date" value={entryForm.date} onChange={(e) => setEntryForm({ ...entryForm, date: e.target.value })} className="bg-secondary border-border" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Valor (R$)</Label>
+                    <Input type="number" step="0.01" min="0" placeholder="0,00" value={entryForm.amount} onChange={(e) => setEntryForm({ ...entryForm, amount: e.target.value })} className="bg-secondary border-border" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Descrição</Label>
+                  <Input placeholder="Ex: salário, freelas..." value={entryForm.description} onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })} className="bg-secondary border-border" />
+                </div>
+                <Button onClick={() => void handleSubmitEntry()} className="w-full gradient-primary text-primary-foreground">
+                  Registrar Entrada
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5 gradient-primary text-primary-foreground">
+                <Plus className="h-4 w-4" /> Novo Gasto
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border">
+              <DialogHeader>
+                <DialogTitle>Registrar Gasto</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Data</Label>
+                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-secondary border-border" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Valor (R$)</Label>
+                    <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="bg-secondary border-border" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Categoria</Label>
+                    <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
+                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {categoryBudgets.map((category) => (
+                          <SelectItem key={category.name} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nome + Cartão</Label>
+                    <Select value={form.card} onValueChange={(v) => setForm({ ...form, card: v })}>
+                      <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="Pix / Débito">Pix / Débito</SelectItem>
+                        {cards.map((c, idx) => {
+                          const label = getCardLabel(c);
+                          return <SelectItem key={`${label}-${idx}`} value={label}>{label}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Descrição</Label>
+                  <Input placeholder="Ex: iFood, Uber, Supermercado..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-secondary border-border" />
+                </div>
+                <Button onClick={() => void handleSubmitExpense()} className="w-full gradient-primary text-primary-foreground">
+                  Registrar Gasto
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Entradas</h3>
+          <span className="text-mono text-sm font-semibold text-primary">+{formatCurrency(cycleEntries.reduce((sum, entry) => sum + entry.amount, 0))}</span>
+        </div>
+        <div className="divide-y divide-border/50">
+          {cycleEntries.length === 0 && (
+            <div className="px-5 py-4 text-xs text-muted-foreground">Nenhuma entrada registrada neste ciclo.</div>
+          )}
+          {cycleEntries.map((entry) => (
+            <div key={`${entry.id ?? `${entry.description}-${entry.date}-${entry.amount}`}`} className="group grid grid-cols-[1fr_100px_120px_40px] gap-2 px-5 py-3 items-center">
+              <span className="text-sm font-medium">{entry.description}</span>
+              <span className="text-mono text-sm text-primary">+{formatCurrency(entry.amount)}</span>
+              <span className="text-mono text-xs text-muted-foreground">{new Date(entry.date).toLocaleDateString("pt-BR")}</span>
+              <button
+                onClick={() => entry.id && void removeEntry(entry.id)}
+                disabled={!entry.id}
+                className="opacity-0 group-hover:opacity-100 disabled:opacity-30 transition-opacity text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
-          </DialogContent>
-        </Dialog>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card overflow-hidden">
@@ -217,7 +319,7 @@ export function Lancamentos() {
           </div>
         </div>
         <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Ciclo {selectedCycle}</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Gastos do Ciclo {selectedCycle}</h3>
           <span className="text-mono text-sm font-semibold text-destructive">-{formatCurrency(cycleTotal)}</span>
         </div>
         <div className="hidden md:grid grid-cols-[1fr_100px_160px_110px_100px_40px] gap-2 px-5 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b">
