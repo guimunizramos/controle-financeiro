@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { addMonthsToCycle, formatCurrency, getCardLabel } from "@/lib/finance-data";
+import { formatCurrency, getCardLabel } from "@/lib/finance-data";
 import { ArrowDownLeft, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,23 +21,42 @@ import {
 } from "@/components/ui/dialog";
 
 export function Lancamentos() {
-  const { transactions, cards, addTransaction, removeTransaction, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
+  const { transactions, cards, categoryBudgets, addTransaction, removeTransaction, selectedCycle, setSelectedCycle, availableCycles } = useFinance();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     description: "",
     amount: "",
     card: "",
-    installments: "1",
+    category: "Caixa",
   });
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [cardFilter, setCardFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const cycleTx = useMemo(
-    () =>
-      [...transactions]
-        .filter((t) => t.cycle === selectedCycle)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    () => [...transactions].filter((t) => t.cycle === selectedCycle),
     [selectedCycle, transactions]
   );
+  const uniqueCards = useMemo(
+    () => [...new Set(cycleTx.map((tx) => tx.card))],
+    [cycleTx]
+  );
+  const uniqueCategories = useMemo(
+    () => [...new Set(cycleTx.map((tx) => tx.category))],
+    [cycleTx]
+  );
+  const filteredTx = useMemo(() => {
+    const filtered = cycleTx.filter((tx) => {
+      const matchesCard = cardFilter === "all" || tx.card === cardFilter;
+      const matchesCategory = categoryFilter === "all" || tx.category === categoryFilter;
+      return matchesCard && matchesCategory;
+    });
+    return filtered.sort((a, b) => {
+      const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortOrder === "asc" ? diff : -diff;
+    });
+  }, [cardFilter, categoryFilter, cycleTx, sortOrder]);
 
   const sortedCycles = useMemo(
     () => [...availableCycles].sort((a, b) => availableCycles.indexOf(a) - availableCycles.indexOf(b)),
@@ -58,28 +77,18 @@ export function Lancamentos() {
   };
 
   const handleSubmit = () => {
-    if (!form.description || !form.amount || !form.card) return;
+    if (!form.description || !form.amount || !form.card || !form.category) return;
 
     const parsedAmount = Number.parseFloat(form.amount);
-    const installments = Math.max(1, Number.parseInt(form.installments || "1", 10));
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
 
-    const installmentAmount = parsedAmount / installments;
-
-    Array.from({ length: installments }).forEach((_, index) => {
-      const installmentNumber = index + 1;
-
-      addTransaction({
-        date: form.date,
-        description:
-          installments > 1
-            ? `${form.description.trim()} (${installmentNumber}/${installments})`
-            : form.description.trim(),
-        amount: installmentAmount,
-        card: form.card,
-        category: "Caixa",
-        cycle: addMonthsToCycle(selectedCycle, index),
-      });
+    addTransaction({
+      date: form.date,
+      description: form.description.trim(),
+      amount: parsedAmount,
+      card: form.card,
+      category: form.category,
+      cycle: selectedCycle,
     });
 
     setForm({
@@ -87,7 +96,7 @@ export function Lancamentos() {
       description: "",
       amount: "",
       card: "",
-      installments: "1",
+      category: "Caixa",
     });
     setOpen(false);
   };
@@ -130,19 +139,17 @@ export function Lancamentos() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Parcelas</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={form.installments}
-                    onChange={(e) => setForm({ ...form, installments: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Categoria (fixa)</Label>
-                  <Input value="Caixa" disabled className="bg-secondary border-border opacity-90" />
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {categoryBudgets.map((category) => (
+                        <SelectItem key={category.name} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -170,6 +177,45 @@ export function Lancamentos() {
       </div>
 
       <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="px-5 py-3 border-b bg-card">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Select value={sortOrder} onValueChange={(value: "desc" | "asc") => setSortOrder(value)}>
+              <SelectTrigger className="h-8 text-xs bg-secondary border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="desc">Mais recente primeiro</SelectItem>
+                <SelectItem value="asc">Mais antigo primeiro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={cardFilter} onValueChange={setCardFilter}>
+              <SelectTrigger className="h-8 text-xs bg-secondary border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">Todos os cartões</SelectItem>
+                {uniqueCards.map((card) => (
+                  <SelectItem key={card} value={card}>
+                    {card}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-8 text-xs bg-secondary border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {uniqueCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <div className="flex items-center justify-between px-5 py-3 bg-secondary/50 border-b">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Ciclo {selectedCycle}</h3>
           <span className="text-mono text-sm font-semibold text-destructive">-{formatCurrency(cycleTotal)}</span>
@@ -178,7 +224,7 @@ export function Lancamentos() {
           <span>Descrição</span><span>Valor</span><span>Cartão</span><span>Categoria</span><span>Data</span><span></span>
         </div>
         <div className="divide-y divide-border/50">
-          {cycleTx.map((tx) => {
+          {filteredTx.map((tx) => {
             const globalIdx = transactions.indexOf(tx);
             return (
               <div key={tx.id} className="group grid grid-cols-1 md:grid-cols-[1fr_100px_160px_110px_100px_40px] gap-1 md:gap-2 px-5 py-3 hover:bg-secondary/30 transition-colors items-center">

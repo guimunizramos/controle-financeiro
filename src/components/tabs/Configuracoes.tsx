@@ -6,6 +6,7 @@ import { CreditCard, CalendarClock, Tag, DollarSign, Plus, Trash2, Pencil, Check
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 function EditableValue({ value, onSave }: { value: number; onSave: (v: number) => void }) {
@@ -14,7 +15,19 @@ function EditableValue({ value, onSave }: { value: number; onSave: (v: number) =
   if (editing) {
     return (
       <div className="flex items-center gap-1">
-        <Input type="number" className="h-7 w-24 bg-secondary border-border text-xs" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <span className="text-xs text-muted-foreground">Limite: </span>
+        <Input
+          type="number"
+          className="h-7 w-24 bg-secondary border-border text-xs"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onSave(parseFloat(draft) || 0);
+              setEditing(false);
+            }
+          }}
+        />
         <button onClick={() => { onSave(parseFloat(draft) || 0); setEditing(false); }} className="text-primary"><Check className="h-3.5 w-3.5" /></button>
         <button onClick={() => setEditing(false)} className="text-muted-foreground"><X className="h-3.5 w-3.5" /></button>
       </div>
@@ -44,11 +57,77 @@ function CardRow({
       {editing ? (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Input value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value })} className="bg-secondary border-border" placeholder="Nome" />
-            <Input value={draft.bank} onChange={(e) => setDraft({ ...draft, bank: e.target.value })} className="bg-secondary border-border" placeholder="Banco/Cartão" />
-            <Input type="number" value={draft.closingDay} onChange={(e) => setDraft({ ...draft, closingDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" placeholder="Fechamento" />
-            <Input type="number" value={draft.dueDay} onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" placeholder="Vencimento" />
-            <Input type="number" value={draft.limit} onChange={(e) => setDraft({ ...draft, limit: Number.parseFloat(e.target.value || "0") })} className="bg-secondary border-border col-span-2" placeholder="Limite" />
+            <div className="space-y-1">
+              <Label className="text-xs">Nome</Label>
+              <Select value={draft.owner} onValueChange={(value) => setDraft({ ...draft, owner: value })}>
+                <SelectTrigger className="bg-secondary border-border">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="Gui">Gui</SelectItem>
+                  <SelectItem value="Dani">Dani</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Banco/Cartão</Label>
+              <Input
+                value={draft.bank}
+                onChange={(e) => setDraft({ ...draft, bank: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Dia Fechamento</Label>
+              <Input
+                type="number"
+                value={draft.closingDay}
+                onChange={(e) => setDraft({ ...draft, closingDay: Number.parseInt(e.target.value || "1", 10) })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Dia Vencimento</Label>
+              <Input
+                type="number"
+                value={draft.dueDay}
+                onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Limite (R$)</Label>
+              <Input
+                type="number"
+                value={draft.limit}
+                onChange={(e) => setDraft({ ...draft, limit: Number.parseFloat(e.target.value || "0") })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => { setDraft(card); setEditing(false); }}>Cancelar</Button>
@@ -89,10 +168,64 @@ function FixedExpenseRow({
       {editing ? (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="bg-secondary border-border col-span-2" placeholder="Nome" />
-            <Input type="number" value={draft.dueDay} onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" placeholder="Vencimento" />
-            <Input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="bg-secondary border-border" placeholder="Categoria" />
-            <Input type="number" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number.parseFloat(e.target.value || "0") })} className="bg-secondary border-border col-span-2" placeholder="Valor" />
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Nome</Label>
+              <Input
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Dia Vencimento</Label>
+              <Input
+                type="number"
+                value={draft.dueDay}
+                onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Categoria</Label>
+              <Input
+                value={draft.category}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Valor (R$)</Label>
+              <Input
+                type="number"
+                value={draft.amount}
+                onChange={(e) => setDraft({ ...draft, amount: Number.parseFloat(e.target.value || "0") })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onSave(draft);
+                    setEditing(false);
+                  }
+                }}
+                className="bg-secondary border-border"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => { setDraft(expense); setEditing(false); }}>Cancelar</Button>
@@ -131,7 +264,7 @@ export function Configuracoes() {
   const caixaCategory = categoryBudgets.find((cat) => cat.name === "Caixa");
 
   const [cardOpen, setCardOpen] = useState(false);
-  const [cardForm, setCardForm] = useState({ owner: "", bank: "", limit: "", closingDay: "", dueDay: "" });
+  const [cardForm, setCardForm] = useState({ owner: "Gui", bank: "", limit: "", closingDay: "", dueDay: "" });
   const [fixedOpen, setFixedOpen] = useState(false);
   const [fixedForm, setFixedForm] = useState({ name: "", dueDay: "", category: "", amount: "" });
   const [catOpen, setCatOpen] = useState(false);
@@ -146,7 +279,7 @@ export function Configuracoes() {
       closingDay: parseInt(cardForm.closingDay) || 1,
       dueDay: parseInt(cardForm.dueDay) || 1,
     });
-    setCardForm({ owner: "", bank: "", limit: "", closingDay: "", dueDay: "" });
+    setCardForm({ owner: "Gui", bank: "", limit: "", closingDay: "", dueDay: "" });
     setCardOpen(false);
   };
   const submitFixed = () => {
@@ -220,7 +353,18 @@ export function Configuracoes() {
                 <DialogHeader><DialogTitle>Novo Cartão</DialogTitle></DialogHeader>
                 <div className="space-y-3 pt-2">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={cardForm.owner} onChange={(e) => setCardForm({ ...cardForm, owner: e.target.value })} className="bg-secondary border-border" /></div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nome</Label>
+                      <Select value={cardForm.owner} onValueChange={(value) => setCardForm({ ...cardForm, owner: value })}>
+                        <SelectTrigger className="bg-secondary border-border">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value="Gui">Gui</SelectItem>
+                          <SelectItem value="Dani">Dani</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-1"><Label className="text-xs">Banco/Cartão</Label><Input value={cardForm.bank} onChange={(e) => setCardForm({ ...cardForm, bank: e.target.value })} className="bg-secondary border-border" /></div>
                   </div>
                   <div className="space-y-1"><Label className="text-xs">Limite</Label><Input type="number" value={cardForm.limit} onChange={(e) => setCardForm({ ...cardForm, limit: e.target.value })} className="bg-secondary border-border" /></div>
