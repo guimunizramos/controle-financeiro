@@ -19,8 +19,19 @@ export interface FinanceState {
   categoryBudgets: CategoryBudget[];
   transactions: Transaction[];
   installmentPurchases: InstallmentPurchase[];
+  entries: Entry[];
   referenceIncome: number;
   selectedCycle: string;
+}
+
+export interface Entry {
+  id?: number;
+  type: "income" | "invoice_paid" | "fixed_paid" | "pix_out";
+  description: string;
+  amount: number;
+  reference_id?: string;
+  cycle: string;
+  date: string;
 }
 
 const LEGACY_LOCAL_STORAGE_KEYS = ["cycle-finance-state-v2", "cycle-finance-data"];
@@ -31,6 +42,7 @@ export const defaultFinanceState: FinanceState = {
   categoryBudgets: defaultBudgets,
   transactions: defaultTransactions,
   installmentPurchases: defaultInstallmentPurchases,
+  entries: [],
   referenceIncome: defaultIncome,
   selectedCycle: getCurrentCycle(),
 };
@@ -83,6 +95,7 @@ function normalizeState(raw: Partial<FinanceState>): FinanceState {
     categoryBudgets: (raw.categoryBudgets ?? defaultBudgets).filter((category) => category.name !== "Caixa"),
     transactions,
     installmentPurchases: installments,
+    entries: raw.entries ?? [],
     referenceIncome: raw.referenceIncome ?? defaultIncome,
     selectedCycle: raw.selectedCycle ?? getCurrentCycle(),
   };
@@ -147,6 +160,29 @@ export async function saveFinanceState(state: FinanceState): Promise<void> {
   await requestJson<FinanceState>("/api/finance/state", {
     method: "PUT",
     body: JSON.stringify(state),
+  });
+}
+
+export async function fetchEntries(): Promise<Entry[]> {
+  const res = await fetch("/api/finance/entries");
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createEntry(entry: Entry): Promise<Entry> {
+  const res = await fetch("/api/finance/entries", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry),
+  });
+  return res.json();
+}
+
+export async function removeEntry(id: number): Promise<void> {
+  await fetch("/api/finance/entries", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
   });
 }
 
