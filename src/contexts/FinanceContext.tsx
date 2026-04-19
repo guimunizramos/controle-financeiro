@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { Card, FixedExpense, CategoryBudget, Transaction, InstallmentPurchase } from "@/lib/finance-data";
 import {
   getCurrentCycle,
@@ -103,6 +103,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [forecastCategoryExpenses, setForecastCategoryExpenses] = useState<CategoryBudget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasInitializedStorage, setHasInitializedStorage] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSavingRef = useRef(false);
+  const pendingSaveRef = useRef<FinanceState | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -164,10 +167,46 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return [{ name: "Caixa", limit: caixaValue, isFixed: true }, ...state.categoryBudgets];
   }, [state.categoryBudgets, state.referenceIncome]);
 
+  const debouncedSave = useCallback((nextState: FinanceState) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      const runSave = async (stateToSave: FinanceState) => {
+        if (isSavingRef.current) {
+          pendingSaveRef.current = stateToSave;
+          return;
+        }
+
+        isSavingRef.current = true;
+
+        try {
+          await saveFinanceState({ ...stateToSave, categoryBudgets: stateToSave.categoryBudgets });
+        } finally {
+          isSavingRef.current = false;
+          const pendingState = pendingSaveRef.current;
+          if (pendingState) {
+            pendingSaveRef.current = null;
+            await runSave(pendingState);
+          }
+        }
+      };
+
+      void runSave(nextState);
+    }, 1500);
+  }, []);
+
   useEffect(() => {
     if (!hasInitializedStorage) return;
-    void saveFinanceState({ ...state, categoryBudgets: state.categoryBudgets });
-  }, [state, hasInitializedStorage]);
+    debouncedSave(state);
+  }, [state, hasInitializedStorage, debouncedSave]);
+
+  useEffect(() => () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+  }, []);
 
   const addCard = useCallback((card: Card) => {
     setState((s) => ({ ...s, cards: [...s.cards, card] }));
