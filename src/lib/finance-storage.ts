@@ -163,10 +163,18 @@ export async function saveFinanceState(state: FinanceState): Promise<void> {
   });
 }
 
+function normalizeEntry(entry: Entry): Entry {
+  return {
+    ...entry,
+    amount: Number(entry.amount ?? 0),
+  };
+}
+
 export async function fetchEntries(): Promise<Entry[]> {
   const res = await fetch("/api/finance/entries");
   if (!res.ok) return [];
-  return res.json();
+  const entries = (await res.json()) as Entry[];
+  return entries.map(normalizeEntry);
 }
 
 export async function createEntry(entry: Entry): Promise<Entry> {
@@ -175,7 +183,8 @@ export async function createEntry(entry: Entry): Promise<Entry> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(entry),
   });
-  return res.json();
+  const created = (await res.json()) as Entry;
+  return normalizeEntry(created);
 }
 
 export async function removeEntry(id: number): Promise<void> {
