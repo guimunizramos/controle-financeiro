@@ -106,6 +106,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const pendingSaveRef = useRef<FinanceState | null>(null);
+  const isReadyToSaveRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const readyToSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const setDirtyState = useCallback((updater: React.SetStateAction<FinanceState>) => {
+    dirtyRef.current = true;
+    setState(updater);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -121,6 +129,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    const markReadyToSave = () => {
+      if (readyToSaveTimerRef.current) {
+        clearTimeout(readyToSaveTimerRef.current);
+      }
+
+      readyToSaveTimerRef.current = setTimeout(() => {
+        isReadyToSaveRef.current = true;
+      }, 200);
+    };
+
     const initialize = async () => {
       try {
         const dbState = await fetchFinanceState();
@@ -130,6 +148,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (dbState) {
           setState({ ...dbState, entries });
           setHasInitializedStorage(true);
+          markReadyToSave();
           return;
         }
 
@@ -139,12 +158,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           await saveFinanceState(legacyState);
           clearLegacyLocalState();
           setHasInitializedStorage(true);
+          markReadyToSave();
           return;
         }
 
         await saveFinanceState(defaultFinanceState);
         setState({ ...defaultFinanceState, entries });
         setHasInitializedStorage(true);
+        markReadyToSave();
       } catch (error) {
         console.error("Erro ao carregar dados financeiros:", error);
       } finally {
@@ -158,6 +179,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       active = false;
+      if (readyToSaveTimerRef.current) {
+        clearTimeout(readyToSaveTimerRef.current);
+      }
     };
   }, []);
 
@@ -193,12 +217,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
+      dirtyRef.current = false;
       void runSave(nextState);
     }, 1500);
   }, []);
 
   useEffect(() => {
     if (!hasInitializedStorage) return;
+    if (!isReadyToSaveRef.current || !dirtyRef.current) return;
     debouncedSave(state);
   }, [state, hasInitializedStorage, debouncedSave]);
 
@@ -209,35 +235,35 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCard = useCallback((card: Card) => {
-    setState((s) => ({ ...s, cards: [...s.cards, card] }));
-  }, []);
+    setDirtyState((s) => ({ ...s, cards: [...s.cards, card] }));
+  }, [setDirtyState]);
   const updateCard = useCallback((i: number, card: Card) => {
-    setState((s) => ({ ...s, cards: s.cards.map((c, idx) => (idx === i ? card : c)) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, cards: s.cards.map((c, idx) => (idx === i ? card : c)) }));
+  }, [setDirtyState]);
   const removeCard = useCallback((i: number) => {
-    setState((s) => ({ ...s, cards: s.cards.filter((_, idx) => idx !== i) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, cards: s.cards.filter((_, idx) => idx !== i) }));
+  }, [setDirtyState]);
 
   const addFixedExpense = useCallback((e: FixedExpense) => {
-    setState((s) => ({ ...s, fixedExpenses: [...s.fixedExpenses, e] }));
-  }, []);
+    setDirtyState((s) => ({ ...s, fixedExpenses: [...s.fixedExpenses, e] }));
+  }, [setDirtyState]);
   const updateFixedExpense = useCallback((i: number, e: FixedExpense) => {
-    setState((s) => ({ ...s, fixedExpenses: s.fixedExpenses.map((x, idx) => (idx === i ? e : x)) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, fixedExpenses: s.fixedExpenses.map((x, idx) => (idx === i ? e : x)) }));
+  }, [setDirtyState]);
   const removeFixedExpense = useCallback((i: number) => {
-    setState((s) => ({ ...s, fixedExpenses: s.fixedExpenses.filter((_, idx) => idx !== i) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, fixedExpenses: s.fixedExpenses.filter((_, idx) => idx !== i) }));
+  }, [setDirtyState]);
 
   const addCategoryBudget = useCallback((b: CategoryBudget) => {
     if (b.name.trim().toLowerCase() === "caixa") return;
-    setState((s) => ({ ...s, categoryBudgets: [...s.categoryBudgets, b] }));
-  }, []);
+    setDirtyState((s) => ({ ...s, categoryBudgets: [...s.categoryBudgets, b] }));
+  }, [setDirtyState]);
   const updateCategoryBudget = useCallback((i: number, b: CategoryBudget) => {
-    setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.map((x, idx) => (idx === i ? b : x)) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.map((x, idx) => (idx === i ? b : x)) }));
+  }, [setDirtyState]);
   const removeCategoryBudget = useCallback((i: number) => {
-    setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
+  }, [setDirtyState]);
 
   const addForecastCategoryExpense = useCallback((b: CategoryBudget) => {
     setForecastCategoryExpenses((current) => [...current, { name: b.name, limit: b.limit }]);
@@ -252,17 +278,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTransaction = useCallback((tx: Omit<Transaction, "id">) => {
-    setState((s) => ({ ...s, transactions: [...s.transactions, { ...tx, id: createEntityId() }] }));
-  }, []);
+    setDirtyState((s) => ({ ...s, transactions: [...s.transactions, { ...tx, id: createEntityId() }] }));
+  }, [setDirtyState]);
   const updateTransaction = useCallback((i: number, tx: Transaction) => {
-    setState((s) => ({ ...s, transactions: s.transactions.map((x, idx) => (idx === i ? tx : x)) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, transactions: s.transactions.map((x, idx) => (idx === i ? tx : x)) }));
+  }, [setDirtyState]);
   const removeTransaction = useCallback((i: number) => {
-    setState((s) => ({ ...s, transactions: s.transactions.filter((_, idx) => idx !== i) }));
-  }, []);
+    setDirtyState((s) => ({ ...s, transactions: s.transactions.filter((_, idx) => idx !== i) }));
+  }, [setDirtyState]);
 
   const addInstallmentPurchase = useCallback((input: AddInstallmentPurchaseInput) => {
-    setState((s) => {
+    setDirtyState((s) => {
       const installmentValues = splitAmountIntoInstallments(input.totalValue, input.totalInstallments);
       const firstCycle = getCycleFromDate(input.firstInstallmentDate);
       const purchaseId = createEntityId();
@@ -298,10 +324,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         transactions: [...s.transactions, ...generatedTransactions],
       };
     });
-  }, []);
+  }, [setDirtyState]);
 
   const updateInstallmentPurchase = useCallback((input: UpdateInstallmentPurchaseInput) => {
-    setState((s) => {
+    setDirtyState((s) => {
       const purchase = s.installmentPurchases.find((item) => item.id === input.id);
       if (!purchase) return s;
 
@@ -344,10 +370,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         ],
       };
     });
-  }, []);
+  }, [setDirtyState]);
 
   const markInstallmentAsPaid = useCallback((purchaseId: string) => {
-    setState((s) => ({
+    setDirtyState((s) => ({
       ...s,
       installmentPurchases: s.installmentPurchases.map((purchase) => {
         if (purchase.id !== purchaseId) return purchase;
@@ -357,7 +383,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     }));
-  }, []);
+  }, [setDirtyState]);
 
   const addEntry = useCallback(async (entry: Entry): Promise<Entry> => {
     const created = await createEntry(entry);
@@ -371,8 +397,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setReferenceIncome = useCallback((value: number) => {
-    setState((s) => ({ ...s, referenceIncome: value }));
-  }, []);
+    setDirtyState((s) => ({ ...s, referenceIncome: value }));
+  }, [setDirtyState]);
   const setSelectedCycle = useCallback((cycle: string) => {
     setState((s) => ({ ...s, selectedCycle: cycle }));
   }, []);
