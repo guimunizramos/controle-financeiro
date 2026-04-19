@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 
+type InstallmentValueMode = "total" | "installment";
+
 function cycleToDate(cycle: string): Date {
   const [monthLabel, yearLabel] = cycle.split("/");
   const month = MONTH_INDEX[monthLabel] ?? 0;
@@ -24,9 +26,11 @@ function cycleToLongLabel(cycle: string): string {
 export function ComprasParceladas() {
   const { installmentPurchases, addInstallmentPurchase, markInstallmentAsPaid, cards, categoryBudgets } = useFinance();
   const [open, setOpen] = useState(false);
+  const [valueMode, setValueMode] = useState<InstallmentValueMode>("total");
   const [form, setForm] = useState({
     description: "",
     totalValue: "",
+    installmentValue: "",
     totalInstallments: "2",
     cardOriginId: "",
     category: "Caixa",
@@ -39,11 +43,14 @@ export function ComprasParceladas() {
   );
 
   const submit = () => {
-    const totalValue = Number.parseFloat(form.totalValue);
     const totalInstallments = Number.parseInt(form.totalInstallments, 10);
     if (!form.description.trim() || !form.cardOriginId || !form.category) return;
-    if (!Number.isFinite(totalValue) || totalValue <= 0) return;
     if (!Number.isInteger(totalInstallments) || totalInstallments < 2) return;
+
+    const rawValue = valueMode === "total" ? Number.parseFloat(form.totalValue) : Number.parseFloat(form.installmentValue);
+    if (!Number.isFinite(rawValue) || rawValue <= 0) return;
+
+    const totalValue = valueMode === "total" ? rawValue : rawValue * totalInstallments;
 
     addInstallmentPurchase({
       description: form.description.trim(),
@@ -57,6 +64,7 @@ export function ComprasParceladas() {
     setForm({
       description: "",
       totalValue: "",
+      installmentValue: "",
       totalInstallments: "2",
       cardOriginId: "",
       category: "Caixa",
@@ -86,13 +94,35 @@ export function ComprasParceladas() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Valor Total (R$)</Label>
-                  <Input type="number" min="0" step="0.01" value={form.totalValue} onChange={(e) => setForm({ ...form, totalValue: e.target.value })} className="bg-secondary border-border" />
+                  <Label className="text-xs">Tipo de valor</Label>
+                  <Select value={valueMode} onValueChange={(v: InstallmentValueMode) => setValueMode(v)}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="total">Valor total</SelectItem>
+                      <SelectItem value="installment">Valor da parcela</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Qtd Parcelas</Label>
                   <Input type="number" min="2" step="1" value={form.totalInstallments} onChange={(e) => setForm({ ...form, totalInstallments: e.target.value })} className="bg-secondary border-border" />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">{valueMode === "total" ? "Valor Total (R$)" : "Valor da Parcela (R$)"}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valueMode === "total" ? form.totalValue : form.installmentValue}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      ...(valueMode === "total" ? { totalValue: e.target.value } : { installmentValue: e.target.value }),
+                    })
+                  }
+                  className="bg-secondary border-border"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
