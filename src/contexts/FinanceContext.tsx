@@ -30,6 +30,10 @@ interface AddInstallmentPurchaseInput {
   firstInstallmentDate: string;
 }
 
+interface UpdateInstallmentPurchaseInput extends AddInstallmentPurchaseInput {
+  id: string;
+}
+
 interface FinanceContextType extends FinanceState {
   isLoading: boolean;
   addCard: (card: Card) => void;
@@ -49,6 +53,7 @@ interface FinanceContextType extends FinanceState {
   updateTransaction: (index: number, tx: Transaction) => void;
   removeTransaction: (index: number) => void;
   addInstallmentPurchase: (input: AddInstallmentPurchaseInput) => void;
+  updateInstallmentPurchase: (input: UpdateInstallmentPurchaseInput) => void;
   markInstallmentAsPaid: (purchaseId: string) => void;
   addEntry: (entry: Entry) => Promise<Entry>;
   removeEntry: (id: number) => Promise<void>;
@@ -256,6 +261,52 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updateInstallmentPurchase = useCallback((input: UpdateInstallmentPurchaseInput) => {
+    setState((s) => {
+      const purchase = s.installmentPurchases.find((item) => item.id === input.id);
+      if (!purchase) return s;
+
+      const firstCycle = getCycleFromDate(input.firstInstallmentDate);
+      const installmentValues = splitAmountIntoInstallments(input.totalValue, input.totalInstallments);
+      const paidInstallments = Math.min(purchase.paidInstallments, input.totalInstallments);
+
+      const regeneratedTransactions: Transaction[] = installmentValues.map((value, index) => ({
+        id: createEntityId(),
+        date: input.firstInstallmentDate,
+        description: `${input.description} (${index + 1}/${input.totalInstallments})`,
+        amount: value,
+        card: input.cardOriginId,
+        category: input.category,
+        cycle: addMonthsToCycle(firstCycle, index),
+        installmentPurchaseId: input.id,
+      }));
+
+      return {
+        ...s,
+        installmentPurchases: s.installmentPurchases.map((item) => {
+          if (item.id !== input.id) return item;
+          return {
+            ...item,
+            description: input.description,
+            totalValue: input.totalValue,
+            totalInstallments: input.totalInstallments,
+            paidInstallments,
+            installmentValue: input.totalValue / input.totalInstallments,
+            cardOriginId: input.cardOriginId,
+            category: input.category,
+            firstInstallmentDate: input.firstInstallmentDate,
+            firstCycle,
+            lastInstallmentCycle: addMonthsToCycle(firstCycle, input.totalInstallments - 1),
+          };
+        }),
+        transactions: [
+          ...s.transactions.filter((tx) => tx.installmentPurchaseId !== input.id),
+          ...regeneratedTransactions,
+        ],
+      };
+    });
+  }, []);
+
   const markInstallmentAsPaid = useCallback((purchaseId: string) => {
     setState((s) => ({
       ...s,
@@ -327,7 +378,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
     addForecastCategoryExpense, updateForecastCategoryExpense, removeForecastCategoryExpense,
     addTransaction, updateTransaction, removeTransaction,
-    addInstallmentPurchase, markInstallmentAsPaid,
+    addInstallmentPurchase, updateInstallmentPurchase, markInstallmentAsPaid,
     addEntry, removeEntry,
     setReferenceIncome, setSelectedCycle,
     availableCycles,

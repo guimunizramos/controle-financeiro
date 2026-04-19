@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
 type InstallmentValueMode = "total" | "installment";
 
@@ -24,10 +24,22 @@ function cycleToLongLabel(cycle: string): string {
 }
 
 export function ComprasParceladas() {
-  const { installmentPurchases, addInstallmentPurchase, markInstallmentAsPaid, cards, categoryBudgets } = useFinance();
+  const { installmentPurchases, addInstallmentPurchase, updateInstallmentPurchase, markInstallmentAsPaid, cards, categoryBudgets } = useFinance();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [valueMode, setValueMode] = useState<InstallmentValueMode>("total");
+  const [editValueMode, setEditValueMode] = useState<InstallmentValueMode>("total");
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [form, setForm] = useState({
+    description: "",
+    totalValue: "",
+    installmentValue: "",
+    totalInstallments: "2",
+    cardOriginId: "",
+    category: "Caixa",
+    firstInstallmentDate: new Date().toISOString().slice(0, 10),
+  });
+  const [editForm, setEditForm] = useState({
     description: "",
     totalValue: "",
     installmentValue: "",
@@ -71,6 +83,49 @@ export function ComprasParceladas() {
       firstInstallmentDate: new Date().toISOString().slice(0, 10),
     });
     setOpen(false);
+  };
+
+  const startEdit = (purchaseId: string) => {
+    const purchase = installmentPurchases.find((item) => item.id === purchaseId);
+    if (!purchase) return;
+
+    setEditingPurchaseId(purchaseId);
+    setEditValueMode("total");
+    setEditForm({
+      description: purchase.description,
+      totalValue: purchase.totalValue.toFixed(2),
+      installmentValue: purchase.installmentValue.toFixed(2),
+      totalInstallments: String(purchase.totalInstallments),
+      cardOriginId: purchase.cardOriginId,
+      category: purchase.category,
+      firstInstallmentDate: purchase.firstInstallmentDate,
+    });
+    setEditOpen(true);
+  };
+
+  const submitEdit = () => {
+    if (!editingPurchaseId) return;
+    const totalInstallments = Number.parseInt(editForm.totalInstallments, 10);
+    if (!editForm.description.trim() || !editForm.cardOriginId || !editForm.category) return;
+    if (!Number.isInteger(totalInstallments) || totalInstallments < 2) return;
+
+    const rawValue = editValueMode === "total" ? Number.parseFloat(editForm.totalValue) : Number.parseFloat(editForm.installmentValue);
+    if (!Number.isFinite(rawValue) || rawValue <= 0) return;
+
+    const totalValue = editValueMode === "total" ? rawValue : rawValue * totalInstallments;
+
+    updateInstallmentPurchase({
+      id: editingPurchaseId,
+      description: editForm.description.trim(),
+      totalValue,
+      totalInstallments,
+      cardOriginId: editForm.cardOriginId,
+      category: editForm.category,
+      firstInstallmentDate: editForm.firstInstallmentDate,
+    });
+
+    setEditOpen(false);
+    setEditingPurchaseId(null);
   };
 
   return (
@@ -158,6 +213,80 @@ export function ComprasParceladas() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Editar Compra Parcelada</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Descrição</Label>
+                <Input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="bg-secondary border-border" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tipo de valor</Label>
+                  <Select value={editValueMode} onValueChange={(v: InstallmentValueMode) => setEditValueMode(v)}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="total">Valor total</SelectItem>
+                      <SelectItem value="installment">Valor da parcela</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Qtd Parcelas</Label>
+                  <Input type="number" min="2" step="1" value={editForm.totalInstallments} onChange={(e) => setEditForm({ ...editForm, totalInstallments: e.target.value })} className="bg-secondary border-border" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">{editValueMode === "total" ? "Valor Total (R$)" : "Valor da Parcela (R$)"}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editValueMode === "total" ? editForm.totalValue : editForm.installmentValue}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      ...(editValueMode === "total" ? { totalValue: e.target.value } : { installmentValue: e.target.value }),
+                    })
+                  }
+                  className="bg-secondary border-border"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cartão</Label>
+                  <Select value={editForm.cardOriginId} onValueChange={(v) => setEditForm({ ...editForm, cardOriginId: v })}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {cards.map((card, idx) => {
+                        const label = getCardLabel(card);
+                        return <SelectItem key={`${label}-${idx}`} value={label}>{label}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {categoryBudgets.map((cat) => <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Data da 1ª Parcela</Label>
+                <Input type="date" value={editForm.firstInstallmentDate} onChange={(e) => setEditForm({ ...editForm, firstInstallmentDate: e.target.value })} className="bg-secondary border-border" />
+              </div>
+              <Button onClick={submitEdit} className="w-full gradient-primary text-primary-foreground">Salvar alterações</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {sortedPurchases.map((purchase) => {
           const remainingInstallments = purchase.totalInstallments - purchase.paidInstallments;
           const progress = purchase.totalInstallments > 0 ? (purchase.paidInstallments / purchase.totalInstallments) * 100 : 0;
@@ -189,6 +318,10 @@ export function ComprasParceladas() {
                 className="w-full"
               >
                 Marcar parcela como paga
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => startEdit(purchase.id)} className="w-full gap-1.5">
+                <Pencil className="h-4 w-4" />
+                Editar lançamento
               </Button>
             </div>
           );
