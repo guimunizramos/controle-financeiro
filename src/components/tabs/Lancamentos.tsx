@@ -68,7 +68,7 @@ export function Lancamentos() {
     });
   }, [cardFilter, categoryFilter, cycleTx, sortOrder]);
   const cycleEntriesTotal = useMemo(
-    () => cycleEntries.reduce((sum, entry) => sum + entry.amount, 0),
+    () => cycleEntries.reduce((sum, entry) => sum + Number(entry.amount), 0),
     [cycleEntries]
   );
 
@@ -268,7 +268,7 @@ export function Lancamentos() {
           {cycleEntries.map((entry) => (
             <div key={`${entry.id ?? `${entry.description}-${entry.date}-${entry.amount}`}`} className="group grid grid-cols-[1fr_100px_120px_40px] gap-2 px-5 py-3 items-center">
               <span className="text-sm font-medium">{entry.description}</span>
-              <span className="text-mono text-sm text-primary">R$ {entry.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-mono text-sm text-primary">R$ {Number(entry.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               <span className="text-mono text-xs text-muted-foreground">{new Date(entry.date).toLocaleDateString("pt-BR")}</span>
               <button
                 onClick={() => entry.id && void removeEntry(entry.id)}

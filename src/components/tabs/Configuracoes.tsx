@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency } from "@/lib/finance-data";
 import type { Card, CategoryBudget, FixedExpense } from "@/lib/finance-data";
-import { CreditCard, CalendarClock, Tag, DollarSign, Plus, Trash2, Pencil, Check, X, Lock } from "lucide-react";
+import { CreditCard, CalendarClock, Tag, Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,15 +40,7 @@ function EditableValue({ value, onSave }: { value: number; onSave: (v: number) =
   );
 }
 
-function CardRow({
-  card,
-  onSave,
-  onRemove,
-}: {
-  card: Card;
-  onSave: (card: Card) => void;
-  onRemove: () => void;
-}) {
+function CardRow({ card, onSave, onRemove }: { card: Card; onSave: (card: Card) => void; onRemove: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Card>(card);
 
@@ -71,62 +63,19 @@ function CardRow({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Banco/Cartão</Label>
-              <Input
-                value={draft.bank}
-                onChange={(e) => setDraft({ ...draft, bank: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input value={draft.bank} onChange={(e) => setDraft({ ...draft, bank: e.target.value })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Dia Fechamento</Label>
-              <Input
-                type="number"
-                value={draft.closingDay}
-                onChange={(e) => setDraft({ ...draft, closingDay: Number.parseInt(e.target.value || "1", 10) })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input type="number" value={draft.closingDay} onChange={(e) => setDraft({ ...draft, closingDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Dia Vencimento</Label>
-              <Input
-                type="number"
-                value={draft.dueDay}
-                onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input type="number" value={draft.dueDay} onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Limite (R$)</Label>
-              <Input
-                type="number"
-                value={draft.limit}
-                onChange={(e) => setDraft({ ...draft, limit: Number.parseFloat(e.target.value || "0") })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input type="number" value={draft.limit} onChange={(e) => setDraft({ ...draft, limit: Number.parseFloat(e.target.value || "0") })} className="bg-secondary border-border" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -151,15 +100,7 @@ function CardRow({
   );
 }
 
-function FixedExpenseRow({
-  expense,
-  onSave,
-  onRemove,
-}: {
-  expense: FixedExpense;
-  onSave: (expense: FixedExpense) => void;
-  onRemove: () => void;
-}) {
+function FixedExpenseRow({ expense, onSave, onRemove }: { expense: FixedExpense; onSave: (expense: FixedExpense) => void; onRemove: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<FixedExpense>(expense);
 
@@ -170,61 +111,19 @@ function FixedExpenseRow({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Nome</Label>
-              <Input
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Dia Vencimento</Label>
-              <Input
-                type="number"
-                value={draft.dueDay}
-                onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input type="number" value={draft.dueDay} onChange={(e) => setDraft({ ...draft, dueDay: Number.parseInt(e.target.value || "1", 10) })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Categoria</Label>
-              <Input
-                value={draft.category}
-                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Valor (R$)</Label>
-              <Input
-                type="number"
-                value={draft.amount}
-                onChange={(e) => setDraft({ ...draft, amount: Number.parseFloat(e.target.value || "0") })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onSave(draft);
-                    setEditing(false);
-                  }
-                }}
-                className="bg-secondary border-border"
-              />
+              <Input type="number" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: Number.parseFloat(e.target.value || "0") })} className="bg-secondary border-border" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -251,7 +150,6 @@ function FixedExpenseRow({
 
 export function Configuracoes() {
   const {
-    referenceIncome, setReferenceIncome,
     cards, addCard, updateCard, removeCard,
     fixedExpenses, addFixedExpense, updateFixedExpense, removeFixedExpense,
     categoryBudgets, addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
@@ -261,7 +159,6 @@ export function Configuracoes() {
     () => categoryBudgets.filter((cat) => !cat.isFixed).map((cat, index) => ({ ...cat, index })),
     [categoryBudgets]
   );
-  const caixaCategory = categoryBudgets.find((cat) => cat.name === "Caixa");
 
   const [cardOpen, setCardOpen] = useState(false);
   const [cardForm, setCardForm] = useState({ owner: "Gui", bank: "", limit: "", closingDay: "", dueDay: "" });
@@ -272,22 +169,18 @@ export function Configuracoes() {
 
   const submitCard = () => {
     if (!cardForm.owner || !cardForm.bank || !cardForm.limit) return;
-    addCard({
-      owner: cardForm.owner.trim(),
-      bank: cardForm.bank.trim(),
-      limit: parseFloat(cardForm.limit),
-      closingDay: parseInt(cardForm.closingDay) || 1,
-      dueDay: parseInt(cardForm.dueDay) || 1,
-    });
+    addCard({ owner: cardForm.owner.trim(), bank: cardForm.bank.trim(), limit: parseFloat(cardForm.limit), closingDay: parseInt(cardForm.closingDay) || 1, dueDay: parseInt(cardForm.dueDay) || 1 });
     setCardForm({ owner: "Gui", bank: "", limit: "", closingDay: "", dueDay: "" });
     setCardOpen(false);
   };
+
   const submitFixed = () => {
     if (!fixedForm.name || !fixedForm.amount) return;
     addFixedExpense({ name: fixedForm.name.trim(), dueDay: parseInt(fixedForm.dueDay) || 1, category: fixedForm.category.trim() || "Outros", amount: parseFloat(fixedForm.amount) });
     setFixedForm({ name: "", dueDay: "", category: "", amount: "" });
     setFixedOpen(false);
   };
+
   const submitCat = () => {
     if (!catForm.name || !catForm.limit) return;
     if (catForm.name.trim().toLowerCase() === "caixa") return;
@@ -296,57 +189,8 @@ export function Configuracoes() {
     setCatOpen(false);
   };
 
-  const [editingIncome, setEditingIncome] = useState(false);
-  const [incomeDraft, setIncomeDraft] = useState(String(referenceIncome));
-  const caixaPct = caixaCategory && referenceIncome > 0 ? (caixaCategory.limit / referenceIncome) * 100 : 0;
-  const caixaStatus = (() => {
-    if (caixaPct < 0) return { label: "CRÍTICO", className: "bg-destructive/15 text-destructive" };
-    if (caixaPct <= 10) return { label: "ALERTA", className: "bg-destructive/15 text-destructive" };
-    if (caixaPct <= 20) return { label: "ATENÇÃO", className: "bg-warning/15 text-warning" };
-    if (caixaPct <= 40) return { label: "BOM", className: "bg-primary/15 text-primary" };
-    return { label: "ÓTIMO", className: "bg-primary/15 text-primary" };
-  })();
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-glow bg-card p-6 glow-primary">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <DollarSign className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Valor de Referência</p>
-              {editingIncome ? (
-                <div className="flex items-center gap-2 mt-1">
-                  <Input type="number" className="h-8 w-40 bg-secondary border-border" value={incomeDraft} onChange={(e) => setIncomeDraft(e.target.value)} />
-                  <button onClick={() => { setReferenceIncome(parseFloat(incomeDraft) || 0); setEditingIncome(false); }} className="text-primary"><Check className="h-4 w-4" /></button>
-                  <button onClick={() => setEditingIncome(false)} className="text-muted-foreground"><X className="h-4 w-4" /></button>
-                </div>
-              ) : (
-                <button onClick={() => { setIncomeDraft(String(referenceIncome)); setEditingIncome(true); }} className="text-mono text-2xl font-bold text-primary hover:underline cursor-pointer flex items-center gap-2">
-                  {formatCurrency(referenceIncome)} <Pencil className="h-4 w-4 opacity-50" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold">Caixa Previsto</h3>
-            </div>
-            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${caixaStatus.className}`}>
-              {caixaStatus.label}
-            </span>
-          </div>
-          <p className="text-mono text-2xl font-bold text-primary">{formatCurrency(caixaCategory?.limit ?? 0)}</p>
-          <p className="text-xs text-muted-foreground">Valor automático, calculado com base na renda de referência e limites das categorias.</p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="rounded-xl border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -363,13 +207,8 @@ export function Configuracoes() {
                     <div className="space-y-1">
                       <Label className="text-xs">Nome</Label>
                       <Select value={cardForm.owner} onValueChange={(value) => setCardForm({ ...cardForm, owner: value })}>
-                        <SelectTrigger className="bg-secondary border-border">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          <SelectItem value="Gui">Gui</SelectItem>
-                          <SelectItem value="Dani">Dani</SelectItem>
-                        </SelectContent>
+                        <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="bg-card border-border"><SelectItem value="Gui">Gui</SelectItem><SelectItem value="Dani">Dani</SelectItem></SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1"><Label className="text-xs">Banco/Cartão</Label><Input value={cardForm.bank} onChange={(e) => setCardForm({ ...cardForm, bank: e.target.value })} className="bg-secondary border-border" /></div>

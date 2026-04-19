@@ -41,6 +41,10 @@ interface FinanceContextType extends FinanceState {
   addCategoryBudget: (budget: CategoryBudget) => void;
   updateCategoryBudget: (index: number, budget: CategoryBudget) => void;
   removeCategoryBudget: (index: number) => void;
+  addForecastCategoryExpense: (budget: CategoryBudget) => void;
+  updateForecastCategoryExpense: (index: number, budget: CategoryBudget) => void;
+  removeForecastCategoryExpense: (index: number) => void;
+  forecastCategoryExpenses: CategoryBudget[];
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (index: number, tx: Transaction) => void;
   removeTransaction: (index: number) => void;
@@ -57,6 +61,7 @@ interface FinanceContextType extends FinanceState {
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
+const FORECAST_CATEGORY_STORAGE_KEY = "forecast-category-expenses-v1";
 
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
@@ -70,10 +75,40 @@ function cycleToKey(cycle: string): number {
   return year * 12 + month;
 }
 
+function parseForecastCategoryExpenses(raw: string | null): CategoryBudget[] {
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as Array<{ name?: string; limit?: number }>;
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((item) => ({
+        name: String(item.name ?? "").trim(),
+        limit: Number(item.limit ?? 0),
+      }))
+      .filter((item) => item.name.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FinanceState>(defaultFinanceState);
+  const [forecastCategoryExpenses, setForecastCategoryExpenses] = useState<CategoryBudget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasInitializedStorage, setHasInitializedStorage] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const parsed = parseForecastCategoryExpenses(window.localStorage.getItem(FORECAST_CATEGORY_STORAGE_KEY));
+    setForecastCategoryExpenses(parsed);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(FORECAST_CATEGORY_STORAGE_KEY, JSON.stringify(forecastCategoryExpenses));
+  }, [forecastCategoryExpenses]);
 
   useEffect(() => {
     let active = true;
@@ -158,6 +193,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const removeCategoryBudget = useCallback((i: number) => {
     setState((s) => ({ ...s, categoryBudgets: s.categoryBudgets.filter((_, idx) => idx !== i) }));
+  }, []);
+
+  const addForecastCategoryExpense = useCallback((b: CategoryBudget) => {
+    setForecastCategoryExpenses((current) => [...current, { name: b.name, limit: b.limit }]);
+  }, []);
+
+  const updateForecastCategoryExpense = useCallback((i: number, b: CategoryBudget) => {
+    setForecastCategoryExpenses((current) => current.map((item, idx) => (idx === i ? { name: b.name, limit: b.limit } : item)));
+  }, []);
+
+  const removeForecastCategoryExpense = useCallback((i: number) => {
+    setForecastCategoryExpenses((current) => current.filter((_, idx) => idx !== i));
   }, []);
 
   const addTransaction = useCallback((tx: Omit<Transaction, "id">) => {
@@ -255,8 +302,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAvailableCash = useCallback(() => {
-    const totalIncome = state.entries.filter((entry) => entry.type === "income").reduce((sum, entry) => sum + entry.amount, 0);
-    const totalOut = state.entries.filter((entry) => entry.type !== "income").reduce((sum, entry) => sum + entry.amount, 0);
+    const totalIncome = state.entries.filter((entry) => entry.type === "income").reduce((sum, entry) => sum + Number(entry.amount), 0);
+    const totalOut = state.entries.filter((entry) => entry.type !== "income").reduce((sum, entry) => sum + Number(entry.amount), 0);
     return totalIncome - totalOut;
   }, [state]);
 
@@ -274,9 +321,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     ...state,
     isLoading,
     categoryBudgets,
+    forecastCategoryExpenses,
     addCard, updateCard, removeCard,
     addFixedExpense, updateFixedExpense, removeFixedExpense,
     addCategoryBudget, updateCategoryBudget, removeCategoryBudget,
+    addForecastCategoryExpense, updateForecastCategoryExpense, removeForecastCategoryExpense,
     addTransaction, updateTransaction, removeTransaction,
     addInstallmentPurchase, markInstallmentAsPaid,
     addEntry, removeEntry,

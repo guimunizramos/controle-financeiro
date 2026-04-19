@@ -1,8 +1,9 @@
-import { Activity, LayoutDashboard, List, Settings, WalletCards } from "lucide-react";
+import { Activity, LayoutDashboard, List, Settings, ShieldCheck, WalletCards } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
 import { Configuracoes } from "@/components/tabs/Configuracoes";
+import { Previsibilidade } from "@/components/tabs/Previsibilidade";
 import { ComprasParceladas } from "@/components/tabs/ComprasParceladas";
 import { useFinance } from "@/contexts/FinanceContext";
 
@@ -42,7 +43,7 @@ const Index = () => {
 
       <main className="container max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="visao-geral" className="space-y-6">
-          <TabsList className="w-full grid grid-cols-2 md:grid-cols-4 h-auto bg-primary border border-primary/70 p-1.5 rounded-xl">
+          <TabsList className="w-full grid grid-cols-2 md:grid-cols-5 h-auto bg-primary border border-primary/70 p-1.5 rounded-xl">
             <TabsTrigger value="visao-geral" className="gap-1.5 text-primary-foreground/80 data-[state=active]:bg-primary-foreground/15 data-[state=active]:text-white">
               <LayoutDashboard className="h-4 w-4" />
               Visão Geral
@@ -54,6 +55,10 @@ const Index = () => {
             <TabsTrigger value="compras-parceladas" className="gap-1.5 text-primary-foreground/80 data-[state=active]:bg-primary-foreground/15 data-[state=active]:text-white">
               <WalletCards className="h-4 w-4" />
               Compras Parceladas
+            </TabsTrigger>
+            <TabsTrigger value="previsibilidade" className="gap-1.5 text-primary-foreground/80 data-[state=active]:bg-primary-foreground/15 data-[state=active]:text-white">
+              <ShieldCheck className="h-4 w-4" />
+              Previsibilidade
             </TabsTrigger>
             <TabsTrigger value="configuracoes" className="gap-1.5 text-primary-foreground/80 data-[state=active]:bg-primary-foreground/15 data-[state=active]:text-white">
               <Settings className="h-4 w-4" />
@@ -69,6 +74,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="compras-parceladas">
             <ComprasParceladas />
+          </TabsContent>
+          <TabsContent value="previsibilidade">
+            <Previsibilidade />
           </TabsContent>
           <TabsContent value="configuracoes">
             <Configuracoes />
