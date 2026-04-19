@@ -1,4 +1,4 @@
-import { Activity, LayoutDashboard, List, Settings, ShieldCheck, WalletCards } from "lucide-react";
+import { Activity, LayoutDashboard, List, Loader2, Settings, ShieldCheck, WalletCards } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisaoGeral } from "@/components/tabs/VisaoGeral";
 import { Lancamentos } from "@/components/tabs/Lancamentos";
@@ -20,7 +20,10 @@ const Index = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Carregando seus dados financeiros...</p>
+        <div className="flex items-center gap-2 text-green-500">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-sm font-medium">Carregando seus dados financeiros...</p>
+        </div>
       </div>
     );
   }
