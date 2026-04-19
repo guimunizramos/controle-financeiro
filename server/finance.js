@@ -2,6 +2,16 @@ import { getDbPool } from "./db.js";
 
 const DEFAULT_USER_KEY = "default";
 
+function hashStringToInt(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash;
+}
+
 function normalizeCard(card) {
   return {
     owner: String(card?.owner ?? "").trim(),
@@ -80,15 +90,20 @@ export async function replaceFinanceCollection(type, items) {
 
   try {
     await client.query("BEGIN");
+    const lockId = hashStringToInt(table);
+    await client.query("SELECT pg_advisory_xact_lock($1)", [lockId]);
     await client.query(`DELETE FROM ${table} WHERE user_key = $1`, [DEFAULT_USER_KEY]);
 
-    for (let index = 0; index < items.length; index += 1) {
+    if (items.length > 0) {
+      const positions = items.map((_, i) => i);
+      const payloads = items.map((item) => JSON.stringify(item));
+      const userKeys = items.map(() => DEFAULT_USER_KEY);
       await client.query(
         `
           INSERT INTO ${table} (user_key, position, payload)
-          VALUES ($1, $2, $3::jsonb);
+          SELECT unnest($1::text[]), unnest($2::int[]), unnest($3::jsonb[]);
         `,
-        [DEFAULT_USER_KEY, index, JSON.stringify(items[index])],
+        [userKeys, positions, payloads],
       );
     }
 
@@ -189,17 +204,15 @@ export async function saveFinanceState(state) {
     selectedCycle: String(state?.selectedCycle ?? "").trim(),
   };
 
-  await Promise.all([
-    replaceFinanceCollection("cards", normalized.cards),
-    replaceFinanceCollection("fixed_expenses", normalized.fixedExpenses),
-    replaceFinanceCollection("category_budgets", normalized.categoryBudgets),
-    replaceFinanceCollection("transactions", normalized.transactions),
-    replaceFinanceCollection("installment_purchases", normalized.installmentPurchases),
-    upsertFinanceSettings({
-      referenceIncome: normalized.referenceIncome,
-      selectedCycle: normalized.selectedCycle,
-    }),
-  ]);
+  await replaceFinanceCollection("cards", normalized.cards);
+  await replaceFinanceCollection("fixed_expenses", normalized.fixedExpenses);
+  await replaceFinanceCollection("category_budgets", normalized.categoryBudgets);
+  await replaceFinanceCollection("transactions", normalized.transactions);
+  await replaceFinanceCollection("installment_purchases", normalized.installmentPurchases);
+  await upsertFinanceSettings({
+    referenceIncome: normalized.referenceIncome,
+    selectedCycle: normalized.selectedCycle,
+  });
 
   return normalized;
 }
