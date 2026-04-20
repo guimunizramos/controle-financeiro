@@ -106,6 +106,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const pendingSaveRef = useRef<FinanceState | null>(null);
+  const latestStateRef = useRef<FinanceState>(defaultFinanceState);
   const isReadyToSaveRef = useRef(false);
   const dirtyRef = useRef(false);
   const readyToSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +126,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(FORECAST_CATEGORY_STORAGE_KEY, JSON.stringify(forecastCategoryExpenses));
   }, [forecastCategoryExpenses]);
+
+  useEffect(() => {
+    latestStateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     let active = true;
@@ -233,6 +238,35 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(saveTimerRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const flushPendingSaveOnBeforeUnload = () => {
+      if (!hasInitializedStorage) return;
+      if (!isReadyToSaveRef.current) return;
+      if (!dirtyRef.current && !saveTimerRef.current && !pendingSaveRef.current) return;
+
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+
+      const stateToSave = pendingSaveRef.current ?? latestStateRef.current;
+      const payload = JSON.stringify({
+        ...stateToSave,
+        categoryBudgets: stateToSave.categoryBudgets,
+      });
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon("/api/finance/state", blob);
+      dirtyRef.current = false;
+      pendingSaveRef.current = null;
+    };
+
+    window.addEventListener("beforeunload", flushPendingSaveOnBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", flushPendingSaveOnBeforeUnload);
+    };
+  }, [hasInitializedStorage]);
 
   const addCard = useCallback((card: Card) => {
     setDirtyState((s) => ({ ...s, cards: [...s.cards, card] }));

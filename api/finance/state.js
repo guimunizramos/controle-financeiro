@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     }
   }
 
-  if (req.method === "PUT") {
+  if (req.method === "PUT" || req.method === "POST") {
     try {
       const payload = await readBody(req);
       const saved = await saveFinanceState(payload);
