@@ -14,6 +14,13 @@ function getGreeting(): string {
   return "Boa noite";
 }
 
+const countdownItems = [
+  { value: "07", label: "dias" },
+  { value: "14", label: "horas" },
+  { value: "32", label: "min" },
+  { value: "18", label: "seg" },
+];
+
 const Index = () => {
   const { isLoading } = useFinance();
 
@@ -43,6 +50,38 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      <section className="mobile-hero-parallax relative overflow-hidden border-b border-primary/20">
+        <div className="container max-w-6xl mx-auto px-4 py-10 md:py-14">
+          <div className="relative z-[1] max-w-2xl space-y-3">
+            <span className="inline-flex rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              Controle financeiro
+            </span>
+            <h2 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+              Organize seus ciclos, cartões e metas em um só lugar.
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground md:text-base">
+              Acompanhe entradas, despesas e previsões com uma visão clara para decidir melhor no dia a dia.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-primary/20 bg-primary/10">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm font-semibold text-white md:text-base">Próxima revisão financeira começa em:</p>
+          <div className="flex flex-wrap items-center gap-3" aria-label="Contagem regressiva para a próxima revisão financeira">
+            {countdownItems.map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <span className="flex h-10 min-w-12 items-center justify-center rounded-lg border border-primary/40 bg-background px-3 text-lg font-bold text-primary shadow-[var(--glow-primary)]">
+                  {item.value}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <main className="container max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="visao-geral" className="space-y-6">
